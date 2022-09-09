@@ -1,45 +1,41 @@
 #!/usr/bin/env python3
 '''Extract And Align Coding Regions Across Multiple Plastomes'''
-__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-09T12:58:57 CEST'
+__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-09T16:22:47 CEST'
 
 #-----------------------------------------------------------------#
 ## IMPORTS
 import argparse
+import Bio
+from Bio import SeqIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
+from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 import collections
 import io  # For file handles
 import os
 import subprocess
 import sys
 
-from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
-#from Bio import Alphabet
-#from Bio.Alphabet import IUPAC
-from Bio import AlignIO  # For function 'AlignIO.convert'
-from Bio.Nexus import Nexus  # For functions 'Nexus.combine' and 'Nexus.Nexus'
-from Bio.Align.Applications import MafftCommandline
+#from Bio.SeqRecord import SeqRecord
+#from Bio import AlignIO  # For function 'AlignIO.convert'
+#from Bio.Nexus import Nexus  # For functions 'Nexus.combine' and 'Nexus.Nexus'
+#from Bio.Align.Applications import MafftCommandline
+#from Bio.Seq import Seq
 
 #-----------------------------------------------------------------#
 # DEBUGGING HELP
 import pdb
 #pdb.set_trace()
 
-#############
-# VARIABLES #
-#############
-
+#-----------------------------------------------------------------#
+# VARIABLES
 path_to_this_script = os.path.dirname(os.path.realpath(__file__))
 path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
 if not os.path.isfile(path_to_back_transl_helper):
-    raise Exception("  ERROR: align_back_trans.py not alongside this script")
+    raise Exception("  ERROR: Cannot find `align_back_trans.py` not alongside this script")
 
-#############
-# FUNCTIONS #
-#############
-
+#-----------------------------------------------------------------#
+# FUNCTIONS
 def extract_collect_CDS(masterdict_nucl, masterdict_prot, inFn, fmt='genbank'):
-    rec = SeqIO.read(inFn, fmt)
+    rec = Bio.SeqIO.read(inFn, fmt)
     for feature in rec.features:
         if feature.type == 'CDS':
             if 'gene' in feature.qualifiers:
@@ -48,7 +44,7 @@ def extract_collect_CDS(masterdict_nucl, masterdict_prot, inFn, fmt='genbank'):
 
                 # Nucleotide sequences
                 seq_obj = feature.extract(rec).seq
-                seq_rec = SeqRecord(seq_obj, id=seq_name, name='', description='')
+                seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                 if gene_name in masterdict_nucl.keys():
                     tmp = masterdict_nucl[gene_name]
                     tmp.append(seq_rec)
@@ -61,11 +57,11 @@ def extract_collect_CDS(masterdict_nucl, masterdict_prot, inFn, fmt='genbank'):
                     # KEEP TRANSLATING FROM EXTRACT
                     #if 'translation' in feature.qualifiers:
                     #    transl = feature.qualifiers['translation'][0]
-                    #    seq_obj = Seq(transl, IUPAC.protein)
+                    #    seq_obj = Bio.Seq.Seq(transl, IUPAC.protein)
                     #else:
                     #    seq_obj = feature.extract(rec).seq.translate(table=11, cds=True)
                 seq_obj = feature.extract(rec).seq.translate(table=11)#, cds=True)
-                seq_rec = SeqRecord(seq_obj, id=seq_name, name='', description='')
+                seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                 if gene_name in masterdict_prot.keys():
                     tmp = masterdict_prot[gene_name]
                     tmp.append(seq_rec)
@@ -84,7 +80,6 @@ def remove_duplicates(my_dict):
                 idtags.append(seqrec.id)
         my_dict[k] = v
     #return my_dict
-
 
 def main(args):
     
@@ -136,7 +131,7 @@ def main(args):
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
             # Write unaligned nucleotide sequences
             with open(outFn_unalign_nucl, 'w') as hndl:
-                SeqIO.write(v, hndl, 'fasta')
+                Bio.SeqIO.write(v, hndl, 'fasta')
     if not masterdict_nucl.items():
         raise Exception("  ERROR: No items in nucleotide masterdictionary.")
 
@@ -146,11 +141,11 @@ def main(args):
             outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
             # WRITE UNALIGNED PROTEIN SEQUENCES
             with open(outFn_unalign_prot, 'w') as hndl:
-                SeqIO.write(v, hndl, 'fasta')
+                Bio.SeqIO.write(v, hndl, 'fasta')
             # ALIGN SEQUENCES
             #import subprocess
             #subprocess.call(['mafft', '--auto', outFn_unalign_prot, '>', outFn_aligned_prot])
-            mafft_cline = MafftCommandline(input=outFn_unalign_prot)
+            mafft_cline = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_prot)
             stdout, stderr = mafft_cline()
             with open(outFn_aligned_prot, 'w') as hndl:
                 hndl.write(stdout)
@@ -177,30 +172,28 @@ def main(args):
 
         # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT
         try:
-            AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
+            Bio.AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             raise Exception("  ERROR: Cannot convert alignment of `%s` from FASTA to NEXUS" % k)
             
         # IMPORT NEXUS AND APPEND TO LIST FOR CONCATENATION
         try:
-            alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
+            alignm_nexus = Bio.AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = io.StringIO()
-            AlignIO.write(alignm_nexus, hndl, 'nexus')
+            Bio.AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
             nexus_string = nexus_string.replace('\n'+k+'_', '\ncombined_')  # IMPORTANT: Stripping the gene name from the sequence name
-            alignm_nexus = Nexus.Nexus(nexus_string)
-            alignm_L.append((k, alignm_nexus)) # Function 'Nexus.combine' needs a tuple.
+            alignm_nexus = Bio.Nexus.Nexus.Nexus(nexus_string)
+            alignm_L.append((k, alignm_nexus)) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
         except:
             raise Exception("  ERROR: Cannot add alignment of `%s` to concatenation" % k)
 
     # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
-    alignm_combined = Nexus.combine(alignm_L) # Function 'Nexus.combine' needs a tuple.
+    alignm_combined = Bio.Nexus.Nexus.combine(alignm_L) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
     outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.fasta')
     outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')
     alignm_combined.write_nexus_data(filename=open(outFn_nucl_combined_nexus, 'w'))
-    AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
-    
-
+    Bio.AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
 
 #-----------------------------------------------------------------#
 # MAIN
@@ -224,3 +217,7 @@ if __name__ == '__main__':
                         help="(Optional) Enable verbose logging", default=True)
     args = parser.parse_args()
     main(args)
+
+#-----------------------------------------------------------------#
+#EOF
+#-----------------------------------------------------------------#
