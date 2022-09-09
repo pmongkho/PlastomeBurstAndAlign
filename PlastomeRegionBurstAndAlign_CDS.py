@@ -1,10 +1,15 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python3
 '''Extract And Align Coding Regions Across Multiple Plastomes'''
+__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-09T12:58:57 CEST'
 
-#####################
-# IMPORT OPERATIONS #
-#####################
+#-----------------------------------------------------------------#
+## IMPORTS
+import argparse
+import collections
+import io  # For file handles
+import os
+import subprocess
+import sys
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -14,26 +19,9 @@ from Bio.Seq import Seq
 from Bio import AlignIO  # For function 'AlignIO.convert'
 from Bio.Nexus import Nexus  # For functions 'Nexus.combine' and 'Nexus.Nexus'
 from Bio.Align.Applications import MafftCommandline
-from io import StringIO  # For file handles
 
-import collections  # For 'collections.OrderedDict()'
-import os
-import subprocess
-import sys
-
-###############
-# AUTHOR INFO #
-###############
-
-__author__ = 'Michael Gruenstaeudl <m.gruenstaeudl@fu-berlin.de>'
-__copyright__ = 'Copyright (C) 2020-2022 Michael Gruenstaeudl'
-__info__ = 'Extract And Align Coding Regions Across Multiple Plastomes'
-__version__ = '2022.09.08.2100'
-
-#############
-# DEBUGGING #
-#############
-
+#-----------------------------------------------------------------#
+# DEBUGGING HELP
 import pdb
 #pdb.set_trace()
 
@@ -44,11 +32,7 @@ import pdb
 path_to_this_script = os.path.dirname(os.path.realpath(__file__))
 path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
 if not os.path.isfile(path_to_back_transl_helper):
-    sys.exit('  ERROR: align_back_trans.py not alongside this script')
-
-#exclude_list = ['clpP', 'ycf15']
-#exclude_list = ['rps12', 'pafI', 'pafII', 'ycf3', 'ycf4', 'pbf1', 'perD']
-exclude_list = ['rps12']
+    raise Exception("  ERROR: align_back_trans.py not alongside this script")
 
 #############
 # FUNCTIONS #
@@ -102,17 +86,24 @@ def remove_duplicates(my_dict):
     #return my_dict
 
 
-def main(inDir, fext='.gb'):
-
-    # MAKE OUTPUT FOLDER
-    outDir = os.path.join(inDir, 'output')
+def main(args):
+    
+    # UNPACKING INPUT PARAMETERS
+    inDir = args.inpd
+    if not os.path.exists(inDir):
+        raise Exception("  ERROR: Input directory `%s` does not exist." % inDir)
+    outDir = args.outd
     if not os.path.exists(outDir):
-        os.makedirs(outDir)
+        raise Exception("  ERROR: Output directory `%s` does not exist." % outDir)
+    fileext = args.fileext
+    exclude_list = args.excllist
 
-    # EXTRACT AND COLLECT CDS FROM RECORDS
-    files = [f for f in os.listdir(inDir) if f.endswith(fext)]
+    # SET UP EMPTY ORDERED DICTIONARIES
     masterdict_nucl = collections.OrderedDict()
     masterdict_prot = collections.OrderedDict()
+    
+    # EXTRACT AND COLLECT CDS FROM RECORDS
+    files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
         extract_collect_CDS(masterdict_nucl, masterdict_prot, os.path.join(inDir, f))
 
@@ -137,7 +128,7 @@ def main(inDir, fext='.gb'):
                 del masterdict_nucl[excluded]
                 del masterdict_prot[excluded]
             else:
-                sys.exit('  ERROR: Gene to be excluded not found in infile.')
+                raise Exception("  ERROR: Gene to be excluded not found in infile.")
 
     # ALIGN AND WRITE TO FILE
     if masterdict_nucl.items():
@@ -147,7 +138,7 @@ def main(inDir, fext='.gb'):
             with open(outFn_unalign_nucl, 'w') as hndl:
                 SeqIO.write(v, hndl, 'fasta')
     if not masterdict_nucl.items():
-        sys.exit('  ERROR: No items in nucleotide masterdictionary.')
+        raise Exception("  ERROR: No items in nucleotide masterdictionary.")
 
     if masterdict_prot.items():
         for k,v in masterdict_prot.items():
@@ -164,7 +155,7 @@ def main(inDir, fext='.gb'):
             with open(outFn_aligned_prot, 'w') as hndl:
                 hndl.write(stdout)
     if not masterdict_prot.items():
-        sys.exit('  ERROR: No items in protein masterdictionary.')
+        raise Exception("  ERROR: No items in protein masterdictionary.")
 
     # BACK-TRANSLATION via Python script by Peter Cook
     # https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
@@ -187,7 +178,7 @@ def main(inDir, fext='.gb'):
         # Convert from fasta to nexus
         try:
             alignm_fasta = AlignIO.read(aligned_nucl_fasta, 'fasta')#, alphabet=Alphabet.generic_dna)  # NOTE: ImportError: Bio.Alphabet has been removed from Biopython. In many cases, the alphabet can simply be ignored and removed from scripts. In a few cases, you may need to specify the ``molecule_type`` as an annotation on a SeqRecord for your script to work correctly. Please see https://biopython.org/wiki/Alphabet for more information.
-            hndl = StringIO()
+            hndl = io.StringIO()
             AlignIO.write(alignm_fasta, hndl, 'nexus')
             nexus_string = hndl.getvalue()
             nexus_string = nexus_string.replace('\n'+k+'_', '\ncombined_')  # IMPORTANT: Stripping the gene name from the sequence name
@@ -195,45 +186,35 @@ def main(inDir, fext='.gb'):
             alignm_L.append((k, alignm_nexus)) # Function 'Nexus.combine' needs a tuple.
         except:
             print('  ERROR: Cannot process alignment of %s' % k)
-    # Combine the NEXUS alignments (in no particular order)
-    n_aligned_CDS = len(alignm_L)
+
+    # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
     alignm_combined = Nexus.combine(alignm_L) # Function 'Nexus.combine' needs a tuple.
-    outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(n_aligned_CDS)+'combined.aligned.fasta')
-    outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(n_aligned_CDS)+'combined.aligned.nexus')
+    outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.fasta')
+    outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')
     alignm_combined.write_nexus_data(filename=open(outFn_nucl_combined_nexus, 'w'))
     AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
     
-    
-############
-# ARGPARSE #
-############
 
+
+#-----------------------------------------------------------------#
+# MAIN
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description="  --  ".join([__author__, __copyright__, __info__, __version__]))
-    
+    parser = argparse.ArgumentParser(description='Author|Version: '+__version__)
     # Required
-    parser.add_argument('-i',
-                        '--inp',
-                        help='relative path to input directory; contains GenBank files; Example: /path_to_input/',
-                        default='/home/username/Desktop/',
-                        required=True)
-
+    parser.add_argument("--inpd", "-i", type=str, required=True, 
+                        help="path to input directory (which contains the GenBank files)",
+                        default="./input")
     # Optional
-    parser.add_argument('-f',
-                        '--fext',
-                        help='File extension of input files', 
-                        default='.gb',
-                        required=False)
-
-    parser.add_argument('--version', 
-                        help='Print version information and exit',
-                        action='version',
-                        version='%(prog)s ' + __version__)
-
+    parser.add_argument("--outd", "-o", type=str, required=False, 
+                        help="(Optional) Path to output directory",
+                        default="./output")
+    parser.add_argument("--fileext", "-f", type=str, required=False, 
+                        help="(Optional) File extension of input files", 
+                        default=".gb")
+    parser.add_argument("--excllist", "-e", type=list, required=False, 
+                        default=['rps12', 'ycf3'], 
+                        help="(Optional) List of genes to be excluded")
+    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__, 
+                        help="(Optional) Enable verbose logging", default=True)
     args = parser.parse_args()
-
-########
-# MAIN #
-########
-    main(args.inp, args.fext)
+    main(args)
