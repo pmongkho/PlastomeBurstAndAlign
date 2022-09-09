@@ -19,14 +19,14 @@ See accompanying text file for licence details (MIT licence).
 
 import sys
 from Bio.Seq import Seq
-from Bio.Alphabet import generic_protein
+#from Bio.Alphabet import generic_protein
 from Bio.Align import MultipleSeqAlignment
 from Bio import SeqIO
 from Bio import AlignIO
 from Bio.Data.CodonTable import ambiguous_generic_by_id
 
 if "-v" in sys.argv or "--version" in sys.argv:
-    print "v0.0.7"
+    print("v0.0.7")
     sys.exit(0)
 
 
@@ -88,14 +88,19 @@ def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record,
     if not gap or len(gap) != 1:
         raise ValueError("Please supply a single gap character")
 
-    alpha = unaligned_nucleotide_record.seq.alphabet
-    if hasattr(alpha, "gap_char"):
-        gap_codon = alpha.gap_char * 3
-        assert len(gap_codon) == 3
-    else:
-        from Bio.Alphabet import Gapped
-        alpha = Gapped(alpha, gap)
-        gap_codon = gap * 3
+	######
+	# Modification on 09-Sep-2022 by Michael Gruenstaeudl
+    #alpha = unaligned_nucleotide_record.seq.alphabet
+    #if hasattr(alpha, "gap_char"):
+    #    gap_codon = alpha.gap_char * 3
+    #    assert len(gap_codon) == 3
+    #else:
+    #    from Bio.Alphabet import Gapped
+    #    alpha = Gapped(alpha, gap)
+    #    gap_codon = gap * 3
+	######
+    gap_codon = '-' * 3
+		
 
     ungapped_protein = aligned_protein_record.seq.ungap(gap)
     ungapped_nucleotide = unaligned_nucleotide_record.seq
@@ -122,7 +127,7 @@ def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record,
 
     aligned_nuc = unaligned_nucleotide_record[:]  # copy for most annotation
     aligned_nuc.letter_annotation = {}  # clear this
-    aligned_nuc.seq = Seq("".join(seq), alpha)  # replace this
+    aligned_nuc.seq = Seq("".join(seq))	#, alpha)  # Modification on 09-Sep-2022 by Michael Gruenstaeudl
     assert len(aligned_protein_record.seq) * 3 == len(aligned_nuc)
     return aligned_nuc
 
@@ -183,7 +188,7 @@ try:
 except ValueError:
     sys.exit("Bad table argument %r" % table)
 
-prot_align = AlignIO.read(prot_align_file, align_format, alphabet=generic_protein)
+prot_align = AlignIO.read(prot_align_file, align_format)#, alphabet=generic_protein)  # Modification on 09-Sep-2022 by Michael Gruenstaeudl
 nuc_dict = SeqIO.index(nuc_fasta_file, "fasta")
 nuc_align = alignment_back_translate(prot_align, nuc_dict, gap="-", table=table)
 AlignIO.write(nuc_align, nuc_align_file, align_format)

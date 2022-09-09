@@ -164,28 +164,34 @@ def main(args):
         outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
         outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
         try:
-            cmd = ['python2', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
+            cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
             log = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except:
-            print('  ERROR: Error encountered during back-translation of %s' % k)
-            print(' '.join(cmd))
+            raise Exception("  ERROR: Cannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
 
-    # IMPORT BACK-TRANSLATIONS AND CONCATENATE
+    # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND FOR CONCATENATION
     alignm_L = []
     for k in masterdict_prot.keys():
         aligned_nucl_fasta = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
         aligned_nucl_nexus = os.path.join(outDir, 'nucl_'+k+'.aligned.nexus')
-        # Convert from fasta to nexus
+
+        # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT
         try:
-            alignm_fasta = AlignIO.read(aligned_nucl_fasta, 'fasta')#, alphabet=Alphabet.generic_dna)  # NOTE: ImportError: Bio.Alphabet has been removed from Biopython. In many cases, the alphabet can simply be ignored and removed from scripts. In a few cases, you may need to specify the ``molecule_type`` as an annotation on a SeqRecord for your script to work correctly. Please see https://biopython.org/wiki/Alphabet for more information.
+            AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
+        except:
+            raise Exception("  ERROR: Cannot convert alignment of `%s` from FASTA to NEXUS" % k)
+            
+        # IMPORT NEXUS AND APPEND TO LIST FOR CONCATENATION
+        try:
+            alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = io.StringIO()
-            AlignIO.write(alignm_fasta, hndl, 'nexus')
+            AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
             nexus_string = nexus_string.replace('\n'+k+'_', '\ncombined_')  # IMPORTANT: Stripping the gene name from the sequence name
             alignm_nexus = Nexus.Nexus(nexus_string)
             alignm_L.append((k, alignm_nexus)) # Function 'Nexus.combine' needs a tuple.
         except:
-            print('  ERROR: Cannot process alignment of %s' % k)
+            raise Exception("  ERROR: Cannot add alignment of `%s` to concatenation" % k)
 
     # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
     alignm_combined = Nexus.combine(alignm_L) # Function 'Nexus.combine' needs a tuple.
