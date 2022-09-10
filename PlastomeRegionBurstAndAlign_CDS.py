@@ -211,7 +211,7 @@ if __name__ == '__main__':
                         help="(Optional) File extension of input files", 
                         default=".gb")
     parser.add_argument("--excllist", "-e", type=list, required=False, 
-                        default=['rps12', 'ycf3'], 
+                        default=['rps12'], 
                         help="(Optional) List of genes to be excluded")
     parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__, 
                         help="(Optional) Enable verbose logging", default=True)
