@@ -1,30 +1,25 @@
-#!/usr/bin/env python3
-'''Extract And Align Coding Regions Across Multiple Plastomes'''
-__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-09T16:22:47 CEST'
 
-#-----------------------------------------------------------------#
-## IMPORTS
-import argparse
-import Bio
-from Bio import SeqIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
-from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
-import collections
-import io  # For file handles
-import os
-import subprocess
-import sys
 
-#-----------------------------------------------------------------#
-# DEBUGGING HELP
-import pdb
-#pdb.set_trace()
 
-#-----------------------------------------------------------------#
-# VARIABLES
-path_to_this_script = os.path.dirname(os.path.realpath(__file__))
-path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
-if not os.path.isfile(path_to_back_transl_helper):
-    raise Exception("  ERROR: Cannot find `align_back_trans.py` not alongside this script")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #-----------------------------------------------------------------#
 # FUNCTIONS
