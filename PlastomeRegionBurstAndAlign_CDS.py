@@ -14,12 +14,6 @@ import os
 import subprocess
 import sys
 
-#from Bio.SeqRecord import SeqRecord
-#from Bio import AlignIO  # For function 'AlignIO.convert'
-#from Bio.Nexus import Nexus  # For functions 'Nexus.combine' and 'Nexus.Nexus'
-#from Bio.Align.Applications import MafftCommandline
-#from Bio.Seq import Seq
-
 #-----------------------------------------------------------------#
 # DEBUGGING HELP
 import pdb
@@ -82,7 +76,7 @@ def remove_duplicates(my_dict):
     #return my_dict
 
 def main(args):
-    
+
     # UNPACKING INPUT PARAMETERS
     inDir = args.inpd
     if not os.path.exists(inDir):
@@ -96,16 +90,17 @@ def main(args):
     # SET UP EMPTY ORDERED DICTIONARIES
     masterdict_nucl = collections.OrderedDict()
     masterdict_prot = collections.OrderedDict()
-    
+
     # EXTRACT AND COLLECT CDS FROM RECORDS
     files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
+        print('\nProcessing file `%s`' % (f))
         extract_collect_CDS(masterdict_nucl, masterdict_prot, os.path.join(inDir, f))
 
     # REMOVE ALL DUPLICATE ENTRIES (result of CDS with multiple exons)
     remove_duplicates(masterdict_nucl)
     remove_duplicates(masterdict_prot)
-    # Note: Not sure why I have to run this removal twice, but not all 
+    # Note: Not sure why I have to run this removal twice, but not all
     #       duplicates are removed first time around.
     remove_duplicates(masterdict_nucl)
     remove_duplicates(masterdict_prot)
@@ -123,7 +118,9 @@ def main(args):
                 del masterdict_nucl[excluded]
                 del masterdict_prot[excluded]
             else:
-                raise Exception("  ERROR: Gene to be excluded not found in infile.")
+                raise Exception("  ERROR: Region to be excluded (%s) not found in infile." % excluded)
+
+    ## SPECIAL FOR CDS #########################################################
 
     # ALIGN AND WRITE TO FILE
     if masterdict_nucl.items():
@@ -164,6 +161,8 @@ def main(args):
         except:
             raise Exception("  ERROR: Cannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
 
+    ## SPECIAL FOR CDS #########################################################
+
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND FOR CONCATENATION
     alignm_L = []
     for k in masterdict_prot.keys():
@@ -175,7 +174,7 @@ def main(args):
             Bio.AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             raise Exception("  ERROR: Cannot convert alignment of `%s` from FASTA to NEXUS" % k)
-            
+
         # IMPORT NEXUS AND APPEND TO LIST FOR CONCATENATION
         try:
             alignm_nexus = Bio.AlignIO.read(aligned_nucl_nexus, 'nexus')
@@ -200,20 +199,20 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Author|Version: '+__version__)
     # Required
-    parser.add_argument("--inpd", "-i", type=str, required=True, 
+    parser.add_argument("--inpd", "-i", type=str, required=True,
                         help="path to input directory (which contains the GenBank files)",
                         default="./input")
     # Optional
-    parser.add_argument("--outd", "-o", type=str, required=False, 
+    parser.add_argument("--outd", "-o", type=str, required=False,
                         help="(Optional) Path to output directory",
                         default="./output")
-    parser.add_argument("--fileext", "-f", type=str, required=False, 
-                        help="(Optional) File extension of input files", 
+    parser.add_argument("--fileext", "-f", type=str, required=False,
+                        help="(Optional) File extension of input files",
                         default=".gb")
-    parser.add_argument("--excllist", "-e", type=list, required=False, 
-                        default=['rps12'], 
+    parser.add_argument("--excllist", "-e", type=list, required=False,
+                        default=['rps12'],
                         help="(Optional) List of genes to be excluded")
-    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__, 
+    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__,
                         help="(Optional) Enable verbose logging", default=True)
     args = parser.parse_args()
     main(args)
