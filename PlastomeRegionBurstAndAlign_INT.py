@@ -11,7 +11,6 @@ from Bio.Align import Applications  # line is necessary for similar reason state
 import collections
 import copy
 import os
-import pdb
 import sys
 
 #-----------------------------------------------------------------#
@@ -47,7 +46,7 @@ def remove_duplicates(my_dict):
     #return my_dict
 
 def main(args):
-    
+
     # UNPACKING INPUT PARAMETERS
     inDir = args.inpd
     if not os.path.exists(inDir):
@@ -157,20 +156,20 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Author|Version: '+__version__)
     # Required
-    parser.add_argument("--inpd", "-i", type=str, required=True, 
+    parser.add_argument("--inpd", "-i", type=str, required=True,
                         help="path to input directory (which contains the GenBank files)",
                         default="./input")
     # Optional
-    parser.add_argument("--outd", "-o", type=str, required=False, 
+    parser.add_argument("--outd", "-o", type=str, required=False,
                         help="(Optional) Path to output directory",
                         default="./output")
-    parser.add_argument("--fileext", "-f", type=str, required=False, 
-                        help="(Optional) File extension of input files", 
+    parser.add_argument("--fileext", "-f", type=str, required=False,
+                        help="(Optional) File extension of input files",
                         default=".gb")
-    parser.add_argument("--excllist", "-e", type=list, required=False, 
-                        default=['rps12'], 
-                        help="(Optional) List of genes to be excluded")
-    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__, 
+    parser.add_argument("--excllist", "-e", type=list, required=False,
+                        default=['rps12'],
+                        help="(Optional) List of regions to be excluded")
+    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s "+__version__,
                         help="(Optional) Enable verbose logging", default=True)
     args = parser.parse_args()
     main(args)
