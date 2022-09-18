@@ -8,7 +8,7 @@ import Bio
 from Bio import SeqIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 import collections
-#import copy
+import copy
 import io
 import os
 import re
@@ -58,6 +58,44 @@ def extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff):
                     masterdict_prot[gene_name] = tmp
                 else:
                     masterdict_prot[gene_name] = [seq_rec]
+
+def conduct_backtranslation(masterdict_prot, outDir):
+        # Step 1. Write unaligned protein sequences to file
+        if masterdict_prot.items():
+            for k,v in masterdict_prot.items():
+                outFn_unalign_prot = os.path.join(outDir, 'prot_'+k+'.unalign.fasta')
+                outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
+                with open(outFn_unalign_prot, 'w') as hndl:
+                    Bio.SeqIO.write(v, hndl, 'fasta')
+                # Step 2. Align sequences
+                #import subprocess
+                #subprocess.call(['mafft', '--auto', outFn_unalign_prot, '>', outFn_aligned_prot])
+                mafft_cline = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_prot)
+                stdout, stderr = mafft_cline()
+                # Step 3. Write aligned protein sequences to file
+                with open(outFn_aligned_prot, 'w') as hndl:
+                    hndl.write(stdout)
+        else:
+            raise Exception("  ERROR: No items in protein masterdictionary.")
+
+        # Step 4. Check if back-translation script existant
+        path_to_this_script = os.path.dirname(os.path.realpath(__file__))
+        path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
+        if not os.path.isfile(path_to_back_transl_helper):
+            raise Exception("  ERROR: Cannot find `align_back_trans.py` not alongside this script")
+
+        # Step 5. Conduct actual back-translation via Python script by Peter Cook
+        # https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
+        for k,v in masterdict_prot.items():
+            outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
+            outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
+            outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
+            try:
+                cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
+                log = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            except:
+                raise Exception("  ERROR: Cannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
+
 #------------------------------------------------------------------------------#
 def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
     # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
@@ -120,6 +158,7 @@ def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
             else:
                 print('  WARNING: %s The IGS between `%s` and `%s` is currently not handled and has to be manually extracted.' % (fname, cur_feat_name, adj_feat_name))
                 continue
+
 #------------------------------------------------------------------------------#
 def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec):
 	for feature in rec.features:
@@ -127,11 +166,10 @@ def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec):
 			try:
 				gene_name_base = feature.qualifiers['gene'][0]
 			except:
-				#pdb.set_trace()
-				print("WARNING: Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
+				print("  WARNING: Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
 				continue
 
-			## Let's limit the search to CDS containing introns
+			## Limiting the search to CDS containing introns
 			if len(feature.location.parts)==2:
 				try:
 					gene_name = gene_name_base + "_intron1"
@@ -165,7 +203,7 @@ def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec):
 					else:
 						masterdict_intron2[gene_name].append(seq_rec)
 				except:
-						print("An error for `%s` occurred." % (gene_name))
+						print("  WARNING: An issue occurred for `%s`" % (gene_name))
 						pass
 
 def extract_INT_internal(rec, feature, gene_name, offset):
@@ -180,6 +218,7 @@ def extract_INT_internal(rec, feature, gene_name, offset):
                 return(seq_rec,gene_name)
             except:
                 raise Exception("  ERROR: Cannot conduct intron extraction for %s" % feature.qualifiers['gene'])
+
 #------------------------------------------------------------------------------#
 def remove_duplicates(my_dict):
     for k,v in my_dict.items():
@@ -192,6 +231,7 @@ def remove_duplicates(my_dict):
                 idtags.append(seqrec.id)
         my_dict[k] = v
     #return my_dict
+
 #------------------------------------------------------------------------------#
 ## MAIN
 #------------------------------------------------------------------------------#
@@ -224,7 +264,7 @@ def main(args):
     # EXTRACT AND COLLECT INT FROM RECORDS
     files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
-        print('\nProcessing file `%s`' % (f))
+        print('Processing file `%s`' % (f))
         rec = Bio.SeqIO.read(os.path.join(inDir, f), 'genbank')
         if select_mode == 'cds':
             extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff)
@@ -232,8 +272,10 @@ def main(args):
             extract_collect_IGS(masterdict_nucl, rec, f, len_cutoff)
         if select_mode == 'int':
             extract_collect_INT(masterdict_intron1, masterdict_intron2, rec)
-            masterdict_nucl = [masterdict_intron1, masterdict_intron2]
+            masterdict_intron1.update(masterdict_intron2)
+            masterdict_nucl = masterdict_intron1
         # Check if masterdictionary empty
+        #pdb.set_trace()
         if not masterdict_nucl.items():
             raise Exception("  ERROR: No items in masterdictionary.")
     #--------------------------------------------------------------------------#
@@ -253,94 +295,59 @@ def main(args):
             if select_mode == 'cds':
                 del masterdict_prot[k]
     #--------------------------------------------------------------------------#
-
-# CONTINUE HERE
-
     # REMOVE ORFs
-    if select_mode == 'cds':
-        list_of_orfs = [orf for orf in masterdict_nucl.keys() if "orf" in orf]
-        for orf in list_of_orfs:
-            del masterdict_nucl[orf]
+    list_of_orfs = [orf for orf in masterdict_nucl.keys() if "orf" in orf]
+    for orf in list_of_orfs:
+        del masterdict_nucl[orf]
+        if select_mode == 'cds':
             del masterdict_prot[orf]
-    if select_mode == 'igs':
-        list_of_orfs = [orf for orf in masterdict_nucl.keys() if "orf" in orf]
-        for orf in list_of_orfs:
-            del masterdict_nucl[orf]
-    if select_mode == 'int':
-        list_of_orfs = [orf for orf in masterdict_nucl.keys() if "orf" in orf]
-            for orf in list_of_orfs:
-                del masterdict_nucl[orf]
     #--------------------------------------------------------------------------#
-    # REMOVE SPECIFIC GENES (OPTIONAL!)
+    # REMOVE SPECIFIC GENES
     if exclude_list:
+        if select_mode == 'int':
+            to_be_excluded = [i+"_intron1" for i in exclude_list]+[i+"_intron2" for i in exclude_list]
+            exclude_list = to_be_excluded
         for excluded in exclude_list:
             if excluded in masterdict_nucl:
                 del masterdict_nucl[excluded]
-                del masterdict_prot[excluded]
+                if select_mode == 'cds':
+                    del masterdict_prot[excluded]
             else:
-                raise Exception("  ERROR: Region to be excluded (%s) not found in infile." % excluded)
-
-    ## SPECIAL FOR CDS #########################################################
-
-    # ALIGN AND WRITE TO FILE
+                print("  WARNING: Region `%s` to be excluded but cannot be found in infile." % excluded)
+                pass
+    #--------------------------------------------------------------------------#
+    # WRITE UNALIGNED NUCLEOTIDE SEQUENCES TO FILE
     if masterdict_nucl.items():
         for k,v in masterdict_nucl.items():
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
-            # Write unaligned nucleotide sequences
+            outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
             with open(outFn_unalign_nucl, 'w') as hndl:
                 Bio.SeqIO.write(v, hndl, 'fasta')
-    if not masterdict_nucl.items():
-        raise Exception("  ERROR: No items in nucleotide masterdictionary.")
-
-    if masterdict_prot.items():
-        for k,v in masterdict_prot.items():
-            outFn_unalign_prot = os.path.join(outDir, 'prot_'+k+'.unalign.fasta')
-            outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
-            # WRITE UNALIGNED PROTEIN SEQUENCES
-            with open(outFn_unalign_prot, 'w') as hndl:
-                Bio.SeqIO.write(v, hndl, 'fasta')
-            # ALIGN SEQUENCES
             #import subprocess
-            #subprocess.call(['mafft', '--auto', outFn_unalign_prot, '>', outFn_aligned_prot])
-            mafft_cline = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_prot)
+            #subprocess.call(['mafft', '--auto', outFn_unalign_nucl, '>', outFn_aligned_nucl])
+            mafft_cline = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_nucl, adjustdirection=True)
             stdout, stderr = mafft_cline()
-            with open(outFn_aligned_prot, 'w') as hndl:
+            with open(outFn_aligned_nucl, 'w') as hndl:
                 hndl.write(stdout)
-    if not masterdict_prot.items():
-        raise Exception("  ERROR: No items in protein masterdictionary.")
+    else:
+        raise Exception("  ERROR: No items in nucleotide masterdictionary to process")
 
-    # BACK-TRANSLATION via Python script by Peter Cook
-    path_to_this_script = os.path.dirname(os.path.realpath(__file__))
-    path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
-    if not os.path.isfile(path_to_back_transl_helper):
-        raise Exception("  ERROR: Cannot find `align_back_trans.py` not alongside this script")
-
-    # https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
-    for k,v in masterdict_prot.items():
-        outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
-        outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
-        outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
-        try:
-            cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
-            log = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except:
-            raise Exception("  ERROR: Cannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
-
-    ## SPECIAL FOR CDS #########################################################
-
-    # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND FOR CONCATENATION
+    #--------------------------------------------------------------------------#
+    # CONDUCT BACK-TRANSLATION
+    if select_mode == 'cds':
+        conduct_backtranslation(masterdict_prot, outDir)
+    #--------------------------------------------------------------------------#
+    # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
     alignm_L = []
-    for k in masterdict_prot.keys():
+    for k in masterdict_nucl.keys():
         aligned_nucl_fasta = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
         aligned_nucl_nexus = os.path.join(outDir, 'nucl_'+k+'.aligned.nexus')
-
-        # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT
+        # Convert FASTA alignment to NEXUS alignment
         try:
             Bio.AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             raise Exception("  ERROR: Cannot convert alignment of `%s` from FASTA to NEXUS" % k)
-
-        # IMPORT NEXUS AND APPEND TO LIST FOR CONCATENATION
+        # Import NEXUS and append to list for concatenation
         try:
             alignm_nexus = Bio.AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = io.StringIO()
@@ -351,8 +358,9 @@ def main(args):
             alignm_L.append((k, alignm_nexus)) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
         except:
             raise Exception("  ERROR: Cannot add alignment of `%s` to concatenation" % k)
-
+    #--------------------------------------------------------------------------#
     # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
+    #pdb.set_trace()
     alignm_combined = Bio.Nexus.Nexus.combine(alignm_L) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
     outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.fasta')
     outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')
