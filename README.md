@@ -1,6 +1,23 @@
 # PlastomeBurstAndAlign
 Extract and align coding regions, introns and intergenic spacers across a set of plastomes
 
+#### Exemplary usage
+```
+MYSCRIPT=~/git/PlastomeRegionBurstAndAlign.py
+
+folder_CDS=./output_CDS
+mkdir -p $folder_CDS
+python $MYSCRIPT -i . -o $folder_CDS -s cds
+
+folder_INT=./output_INT
+mkdir -p $folder_INT
+python $MYSCRIPT -i . -o $folder_INT -s int
+
+folder_IGS=./output_IGS
+mkdir -p $folder_IGS
+python $MYSCRIPT -i . -o $folder_IGS -s igs
+```
+
 #### Exemplary exclude lists
 
 ###### Exclude-list for genes (CDS)
