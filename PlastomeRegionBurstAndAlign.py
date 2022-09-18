@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-16T18:37:42 CEST'
+__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-18T22:35:40 CEST'
 #------------------------------------------------------------------------------#
 ## IMPORTS
 import argparse
 import Bio
 from Bio import SeqIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
+import coloredlogs
 import collections
 import copy
 import io
+import logging
 import os
 import re
 import subprocess
 import sys
 #------------------------------------------------------------------------------#
 ## DEBUGGING HELP
-import pdb
-#pdb.set_trace()
+import ipdb
+#ipdb.set_trace()
 #------------------------------------------------------------------------------#
 ## FUNCTIONS
 #------------------------------------------------------------------------------#
@@ -37,13 +39,6 @@ def extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff):
                 else:
                     masterdict_nucl[gene_name] = [seq_rec]
                 # Protein sequences
-                    # DON'T USE QUALIFIER 'TRANSLATION', AS GENES WITH INTRONS ARE COUNTED TWICE;
-                    # KEEP TRANSLATING FROM EXTRACT
-                    #if 'translation' in feature.qualifiers:
-                    #    transl = feature.qualifiers['translation'][0]
-                    #    seq_obj = Bio.Seq.Seq(transl, IUPAC.protein)
-                    #else:
-                    #    seq_obj = feature.extract(rec).seq.translate(table=11, cds=True)
                 seq_obj = feature.extract(rec).seq.translate(table=11)#, cds=True)
                 seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                 # Length cutoff value
@@ -59,7 +54,7 @@ def extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff):
                 else:
                     masterdict_prot[gene_name] = [seq_rec]
 
-def conduct_backtranslation(masterdict_prot, outDir):
+def conduct_backtranslation(masterdict_prot, outDir, log):
         # Step 1. Write unaligned protein sequences to file
         if masterdict_prot.items():
             for k,v in masterdict_prot.items():
@@ -76,13 +71,15 @@ def conduct_backtranslation(masterdict_prot, outDir):
                 with open(outFn_aligned_prot, 'w') as hndl:
                     hndl.write(stdout)
         else:
-            raise Exception("  ERROR: No items in protein masterdictionary.")
+            log.critical("\tNo items in protein masterdictionary")
+            raise Exception()
 
         # Step 4. Check if back-translation script existant
         path_to_this_script = os.path.dirname(os.path.realpath(__file__))
         path_to_back_transl_helper = path_to_this_script + '/align_back_trans.py'
         if not os.path.isfile(path_to_back_transl_helper):
-            raise Exception("  ERROR: Cannot find `align_back_trans.py` not alongside this script")
+            log.critical("\tCannot find `align_back_trans.py` not alongside this script")
+            raise Exception()
 
         # Step 5. Conduct actual back-translation via Python script by Peter Cook
         # https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
@@ -94,10 +91,11 @@ def conduct_backtranslation(masterdict_prot, outDir):
                 cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
                 log = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             except:
-                raise Exception("  ERROR: Cannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
+                log.critical("\tCannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
+                raise Exception()
 
 #------------------------------------------------------------------------------#
-def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
+def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff, log):
     # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
     # Resulting list contains adjacent features in order of appearance on genome
     # Note 1: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
@@ -109,7 +107,6 @@ def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
         cur_feat_name = cur_feat.qualifiers['gene'][0]
         adj_feat = all_genes[idx+1]
         adj_feat_name = adj_feat.qualifiers['gene'][0]
-        #print('  %s %s Analyzing genes `%s` and `%s`' % (fname, count, cur_feat_name, adj_feat_name))
         # Define names of IGS
         if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
             cur_feat_name = cur_feat_name
@@ -132,7 +129,7 @@ def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
                     try:
                         exact_location = Bio.SeqFeature.FeatureLocation(start_pos, end_pos)
                     except:
-                        print('  WARNING: %s Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ) . Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
+                        log.warning('\t%s Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ) . Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
                         continue
                 # Make IGS SeqRecord
                 seq_obj = exact_location.extract(rec).seq
@@ -149,64 +146,64 @@ def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff):
                         tmp = masterdict_nucl[IGS_name]
                         tmp.append(seq_rec)
                         masterdict_nucl[IGS_name] = tmp
-                        #print('  %s `%s` processed successfully' % (fname, IGS_name))
                     if inv_IGS_name in masterdict_nucl.keys():
                         pass  # Don't count IGS in the IRs twice
                 else:
                     masterdict_nucl[IGS_name] = [seq_rec]
             # Handle genes with compound locations
             else:
-                print('  WARNING: %s The IGS between `%s` and `%s` is currently not handled and has to be manually extracted.' % (fname, cur_feat_name, adj_feat_name))
+                log.warning("\t%s The IGS between `%s` and `%s` is currently not handled and has to be manually extracted" % (fname, cur_feat_name, adj_feat_name))
                 continue
 
 #------------------------------------------------------------------------------#
-def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec):
-	for feature in rec.features:
-		if feature.type == 'CDS':
-			try:
-				gene_name_base = feature.qualifiers['gene'][0]
-			except:
-				print("  WARNING: Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
-				continue
+def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec, log):
+    for feature in rec.features:
+        if feature.type == 'CDS':
+            try:
+                gene_name_base = feature.qualifiers['gene'][0]
+            except:
+                log.warning("\tUnable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
+                continue
 
-			## Limiting the search to CDS containing introns
-			if len(feature.location.parts)==2:
-				try:
-					gene_name = gene_name_base + "_intron1"
-					seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0)
-					if gene_name not in masterdict_intron1.keys():
-						masterdict_intron1[gene_name] = [seq_rec]
-					else:
-						masterdict_intron1[gene_name].append(seq_rec)
-				except:
-					print("An error for `%s` occurred." % (gene_name))
-					pass
+            ## Limiting the search to CDS containing introns
+            if len(feature.location.parts)==2:
+                try:
+                    gene_name = gene_name_base + "_intron1"
+                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                    if gene_name not in masterdict_intron1.keys():
+                        masterdict_intron1[gene_name] = [seq_rec]
+                    else:
+                        masterdict_intron1[gene_name].append(seq_rec)
+                except:
+                    log.warning("\tAn error for `%s` occurred." % (gene_name))
+                    pass
 
-			if len(feature.location.parts)==3:
-				copy_feature = copy.deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
-				try:
-					gene_name = gene_name_base + "_intron1"
-					seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0)
-					if gene_name not in masterdict_intron1.keys():
-						masterdict_intron1[gene_name] = [seq_rec]
-					else:
-						masterdict_intron1[gene_name].append(seq_rec)
-				except:
-					raise Exception("  ERROR: An error occurred for `%s`" % (gene_name))
-					#pass
-				feature = copy_feature
-				try:
-					gene_name = gene_name_base + "_intron2"
-					seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 1)
-					if gene_name not in masterdict_intron2.keys():
-						masterdict_intron2[gene_name] = [seq_rec]
-					else:
-						masterdict_intron2[gene_name].append(seq_rec)
-				except:
-						print("  WARNING: An issue occurred for `%s`" % (gene_name))
-						pass
+            if len(feature.location.parts)==3:
+                copy_feature = copy.deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
+                try:
+                    gene_name = gene_name_base + "_intron1"
+                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                    if gene_name not in masterdict_intron1.keys():
+                        masterdict_intron1[gene_name] = [seq_rec]
+                    else:
+                        masterdict_intron1[gene_name].append(seq_rec)
+                except:
+                    log.critical("\tAn error occurred for `%s`" % (gene_name))
+                    raise Exception()
+                    #pass
+                feature = copy_feature
+                try:
+                    gene_name = gene_name_base + "_intron2"
+                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 1, log)
+                    if gene_name not in masterdict_intron2.keys():
+                        masterdict_intron2[gene_name] = [seq_rec]
+                    else:
+                        masterdict_intron2[gene_name].append(seq_rec)
+                except:
+                    log.warning("\tAn issue occurred for `%s`" % (gene_name))
+                    pass
 
-def extract_INT_internal(rec, feature, gene_name, offset):
+def extract_INT_internal(rec, feature, gene_name, offset, log):
             try:
                     feature.location = Bio.SeqFeature.FeatureLocation(feature.location.parts[offset].end, feature.location.parts[offset+1].start)
             except:
@@ -217,7 +214,8 @@ def extract_INT_internal(rec, feature, gene_name, offset):
                 seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                 return(seq_rec,gene_name)
             except:
-                raise Exception("  ERROR: Cannot conduct intron extraction for %s" % feature.qualifiers['gene'])
+                log.critical("\tCannot conduct intron extraction for %s" % feature.qualifiers['gene'])
+                raise Exception()
 
 #------------------------------------------------------------------------------#
 def remove_duplicates(my_dict):
@@ -241,15 +239,25 @@ def main(args):
     # UNPACKING INPUT PARAMETERS
     inDir = args.inpd
     if not os.path.exists(inDir):
-        raise Exception("  ERROR: Input directory `%s` does not exist." % inDir)
+        log.critical("\tInput directory `%s` does not exist." % inDir)
+        raise Exception()
     outDir = args.outd
     if not os.path.exists(outDir):
-        raise Exception("  ERROR: Output directory `%s` does not exist." % outDir)
+        log.critical("\tOutput directory `%s` does not exist." % outDir)
+        raise Exception()
     fileext = args.fileext
     exclude_list = args.excllist
     len_cutoff = args.lencutoff
     tax_cutoff = args.taxcutoff
     select_mode = args.selectmode.lower()
+    verbose = args.verbose
+    #--------------------------------------------------------------------------#
+    # SET UP LOGGER
+    log = logging.getLogger(__name__)
+    if verbose:
+        coloredlogs.install(fmt='%(asctime)s [%(levelname)s] %(message)s', level=logging.DEBUG, logger=log)
+    else:
+        coloredlogs.install(fmt='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO, logger=log)
     #--------------------------------------------------------------------------#
     # SET UP EMPTY ORDERED DICTIONARIES
     # CDS
@@ -264,20 +272,20 @@ def main(args):
     # EXTRACT AND COLLECT INT FROM RECORDS
     files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
-        print('Processing file `%s`' % (f))
+        log.info('\tProcessing file `%s`' % (f))
         rec = Bio.SeqIO.read(os.path.join(inDir, f), 'genbank')
         if select_mode == 'cds':
             extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff)
         if select_mode == 'igs':
-            extract_collect_IGS(masterdict_nucl, rec, f, len_cutoff)
+            extract_collect_IGS(masterdict_nucl, rec, f, len_cutoff, log)
         if select_mode == 'int':
-            extract_collect_INT(masterdict_intron1, masterdict_intron2, rec)
+            extract_collect_INT(masterdict_intron1, masterdict_intron2, rec, log)
             masterdict_intron1.update(masterdict_intron2)
             masterdict_nucl = masterdict_intron1
         # Check if masterdictionary empty
-        #pdb.set_trace()
         if not masterdict_nucl.items():
-            raise Exception("  ERROR: No items in masterdictionary.")
+            log.critical("\tNo items in masterdictionary" % outDir)
+            raise Exception()
     #--------------------------------------------------------------------------#
     # REMOVE DUPLICATE ENTRIES
         # Note: Not sure why I have to run this removal twice, but not all
@@ -313,7 +321,7 @@ def main(args):
                 if select_mode == 'cds':
                     del masterdict_prot[excluded]
             else:
-                print("  WARNING: Region `%s` to be excluded but cannot be found in infile." % excluded)
+                log.warning("\tRegion `%s` to be excluded but cannot be found in infile." % excluded)
                 pass
     #--------------------------------------------------------------------------#
     # WRITE UNALIGNED NUCLEOTIDE SEQUENCES TO FILE
@@ -330,12 +338,13 @@ def main(args):
             with open(outFn_aligned_nucl, 'w') as hndl:
                 hndl.write(stdout)
     else:
-        raise Exception("  ERROR: No items in nucleotide masterdictionary to process")
+        log.critical("\tNo items in nucleotide masterdictionary to process")
+        raise Exception()
 
     #--------------------------------------------------------------------------#
     # CONDUCT BACK-TRANSLATION
     if select_mode == 'cds':
-        conduct_backtranslation(masterdict_prot, outDir)
+        conduct_backtranslation(masterdict_prot, outDir, log)
     #--------------------------------------------------------------------------#
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
     alignm_L = []
@@ -346,7 +355,8 @@ def main(args):
         try:
             Bio.AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
-            raise Exception("  ERROR: Cannot convert alignment of `%s` from FASTA to NEXUS" % k)
+            log.critical("\tCannot convert alignment of `%s` from FASTA to NEXUS" % k)
+            raise Exception()
         # Import NEXUS and append to list for concatenation
         try:
             alignm_nexus = Bio.AlignIO.read(aligned_nucl_nexus, 'nexus')
@@ -357,10 +367,10 @@ def main(args):
             alignm_nexus = Bio.Nexus.Nexus.Nexus(nexus_string)
             alignm_L.append((k, alignm_nexus)) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
         except:
-            raise Exception("  ERROR: Cannot add alignment of `%s` to concatenation" % k)
+            log.critical("\tCannot add alignment of `%s` to concatenation" % k)
+            raise Exception()
     #--------------------------------------------------------------------------#
     # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
-    #pdb.set_trace()
     alignm_combined = Bio.Nexus.Nexus.combine(alignm_L) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
     outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.fasta')
     outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')
