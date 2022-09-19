@@ -183,7 +183,7 @@ def conduct_backtranslation(mainD_prot, outDir, log):
                 with open(outFn_aligned_prot, 'w') as hndl:
                     hndl.write(stdout)
         else:
-            log.critical("\tNo items in protein masterdictionary")
+            log.critical("\tNo items in protein main dictionary")
             raise Exception()
 
         # Step 4. Check if back-translation script existant
@@ -283,7 +283,7 @@ def main(args):
         if select_mode == 'int':
             ExtractAndCollect(mainD_nucl).do_INT(mainD_intron2, rec, log)
             mainD_nucl.update(mainD_intron2)
-        # Check if masterdictionary empty
+        # Check if main dictionary empty
         if not mainD_nucl.items():
             log.critical("\tNo items in main dictionary" % outDir)
             raise Exception()
@@ -305,13 +305,19 @@ def main(args):
                 del mainD_prot[k]
     #--------------------------------------------------------------------------#
     # REMOVE ORFs
+    action = "removing ORFs"
+    log.info("%s" % action)
+    ###
     list_of_orfs = [orf for orf in mainD_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
         del mainD_nucl[orf]
         if select_mode == 'cds':
             del mainD_prot[orf]
     #--------------------------------------------------------------------------#
-    # REMOVE SPECIFIC GENES
+    # REMOVE USER-DEFINED GENES
+    action = "removing user-defined genes"
+    log.info("%s" % action)
+    ###
     if exclude_list:
         if select_mode == 'int':
             to_be_excluded = [i+"_intron1" for i in exclude_list]+[i+"_intron2" for i in exclude_list]
@@ -326,6 +332,9 @@ def main(args):
                 pass
     #--------------------------------------------------------------------------#
     # WRITE UNALIGNED NUCLEOTIDE SEQUENCES TO FILE
+    action = "writing unaligned nucleotide sequences to file"
+    log.info("%s" % action)
+    ###
     if mainD_nucl.items():
         for k,v in mainD_nucl.items():
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
@@ -339,15 +348,20 @@ def main(args):
             with open(outFn_aligned_nucl, 'w') as hndl:
                 hndl.write(stdout)
     else:
-        log.critical("\tNo items in nucleotide masterdictionary to process")
+        log.critical("\tNo items in nucleotide main dictionary to process")
         raise Exception()
-
     #--------------------------------------------------------------------------#
     # CONDUCT BACK-TRANSLATION
     if select_mode == 'cds':
+        action = "conducting back-translation"
+        log.info("%s" % action)
+        ###
         conduct_backtranslation(mainD_prot, outDir, log)
     #--------------------------------------------------------------------------#
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
+    action = "converting FASTA alignment to NEXUS alignment"
+    log.info("%s" % action)
+    ###
     alignm_L = []
     for k in mainD_nucl.keys():
         aligned_nucl_fasta = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
@@ -380,6 +394,11 @@ def main(args):
     outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')
     alignm_combined.write_nexus_data(filename=open(outFn_nucl_combined_nexus, 'w'))
     Bio.AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
+    #--------------------------------------------------------------------------#
+    # CLOSING
+    action = "End of script.\n"
+    log.info("%s" % action)
+    quit()
 
 #------------------------------------------------------------------------------#
 # ARGPARSE
