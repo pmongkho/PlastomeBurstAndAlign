@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-18T22:35:40 CEST'
+__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-19T11:07:41 CEST'
 #------------------------------------------------------------------------------#
 ## IMPORTS
 import argparse
@@ -20,44 +20,156 @@ import sys
 ## DEBUGGING HELP
 import ipdb
 #ipdb.set_trace()
-#------------------------------------------------------------------------------#
-## FUNCTIONS
-#------------------------------------------------------------------------------#
-def extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff):
-    for feature in rec.features:
-        if feature.type == 'CDS':
-            if 'gene' in feature.qualifiers:
-                gene_name = feature.qualifiers['gene'][0]
-                seq_name = gene_name + '_' + rec.name
-                # Nucleotide sequences
-                seq_obj = feature.extract(rec).seq
-                seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                if gene_name in masterdict_nucl.keys():
-                    tmp = masterdict_nucl[gene_name]
-                    tmp.append(seq_rec)
-                    masterdict_nucl[gene_name] = tmp
-                else:
-                    masterdict_nucl[gene_name] = [seq_rec]
-                # Protein sequences
-                seq_obj = feature.extract(rec).seq.translate(table=11)#, cds=True)
-                seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                # Length cutoff value
-                if len(seq_obj) >= len_cutoff:
-                    pass
-                else:
-                    continue
-                # Foo bar baz
-                if gene_name in masterdict_prot.keys():
-                    tmp = masterdict_prot[gene_name]
-                    tmp.append(seq_rec)
-                    masterdict_prot[gene_name] = tmp
-                else:
-                    masterdict_prot[gene_name] = [seq_rec]
+#-----------------------------------------------------------------#
+# CLASSES AND FUNCTIONS
 
-def conduct_backtranslation(masterdict_prot, outDir, log):
+class ExtractAndCollect:
+
+    def __init__(self, mainD_nucl):
+        self.mainD_nucl = mainD_nucl
+
+    def do_CDS(self, mainD_prot, rec, len_cutoff, log):
+        for feature in rec.features:
+            if feature.type == 'CDS':
+                if 'gene' in feature.qualifiers:
+                    gene_name = feature.qualifiers['gene'][0]
+                    seq_name = gene_name + '_' + rec.name
+                    # Nucleotide sequences
+                    seq_obj = feature.extract(rec).seq
+                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    if gene_name in self.mainD_nucl.keys():
+                        tmp = self.mainD_nucl[gene_name]
+                        tmp.append(seq_rec)
+                        self.mainD_nucl[gene_name] = tmp
+                    else:
+                        self.mainD_nucl[gene_name] = [seq_rec]
+                    # Protein sequences
+                    seq_obj = feature.extract(rec).seq.translate(table=11)#, cds=True)
+                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    # Length cutoff value
+                    if len(seq_obj) >= len_cutoff:
+                        pass
+                    else:
+                        continue
+                    # Foo bar baz
+                    if gene_name in mainD_prot.keys():
+                        tmp = mainD_prot[gene_name]
+                        tmp.append(seq_rec)
+                        mainD_prot[gene_name] = tmp
+                    else:
+                        mainD_prot[gene_name] = [seq_rec]
+
+    def do_IGS(self, rec, fname, len_cutoff, log):
+        # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
+        # Resulting list contains adjacent features in order of appearance on genome
+        # Note 1: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
+        # Note 2: The statement "if feature.qualifier['gene'][0] not 'matK'" is necessary, as matK is located inside trnK
+        all_genes = [feature for feature in rec.features if (feature.type=='gene' and feature.qualifiers['gene'][0]!='matK')]
+        # LOOP THROUGH GENES
+        for count, idx in enumerate(range(0, len(all_genes)-1), 1):
+            cur_feat = all_genes[idx]
+            cur_feat_name = cur_feat.qualifiers['gene'][0]
+            adj_feat = all_genes[idx+1]
+            adj_feat_name = adj_feat.qualifiers['gene'][0]
+            # Define names of IGS
+            if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
+                cur_feat_name = cur_feat_name
+                cur_feat_name_SAFE = cur_feat_name.replace('-','_')
+                cur_feat_name_SAFE = re.sub(r'[^\w]', '', cur_feat_name_SAFE)
+                adj_feat_name = adj_feat_name
+                adj_feat_name_SAFE = adj_feat_name.replace('-','_')
+                adj_feat_name_SAFE = re.sub(r'[^\w]', '', adj_feat_name_SAFE)
+                IGS_name = cur_feat_name_SAFE + '_' + adj_feat_name_SAFE
+                inv_IGS_name = adj_feat_name_SAFE + '_' + cur_feat_name_SAFE
+                # Exclude all genes with compound locations (as it only messes things up)
+                if type(cur_feat.location) is not Bio.SeqFeature.CompoundLocation and \
+                type(adj_feat.location) is not Bio.SeqFeature.CompoundLocation:
+                    # Make IGS SeqFeature
+                    start_pos = Bio.SeqFeature.ExactPosition(cur_feat.location.end) #+1)  Note: It's unclear if a +1 is needed here.
+                    end_pos = Bio.SeqFeature.ExactPosition(adj_feat.location.start)
+                    if int(start_pos) >= int(end_pos):
+                        continue    # If there is no IGS, then simply skip this gene pair
+                    else:
+                        try:
+                            exact_location = Bio.SeqFeature.FeatureLocation(start_pos, end_pos)
+                        except:
+                            log.warning('\t%s Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ) . Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
+                            continue
+                    # Make IGS SeqRecord
+                    seq_obj = exact_location.extract(rec).seq
+                    seq_name = IGS_name + '_' + rec.name
+                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    # Length cutoff value
+                    if len(seq_obj) >= len_cutoff:
+                        pass
+                    else:
+                        continue
+                    # ATTACH SEQRECORD TO GROWING DICTIONARY
+                    if IGS_name in self.mainD_nucl.keys() or inv_IGS_name in self.mainD_nucl.keys():
+                        if IGS_name in self.mainD_nucl.keys():
+                            tmp = self.mainD_nucl[IGS_name]
+                            tmp.append(seq_rec)
+                            self.mainD_nucl[IGS_name] = tmp
+                        if inv_IGS_name in self.mainD_nucl.keys():
+                            pass  # Don't count IGS in the IRs twice
+                    else:
+                        self.mainD_nucl[IGS_name] = [seq_rec]
+                # Handle genes with compound locations
+                else:
+                    log.warning("\t%s The IGS between `%s` and `%s` is currently not handled and has to be extracted manually. Skipping this IGS ..." % (fname, cur_feat_name, adj_feat_name))
+                    continue
+
+    def do_INT(self, mainD_intron2, rec, log):
+        for feature in rec.features:
+            if feature.type == 'CDS':
+                try:
+                    gene_name_base = feature.qualifiers['gene'][0]
+                except:
+                    log.warning("\tUnable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
+                    continue
+                # Limiting the search to CDS containing introns
+                if len(feature.location.parts)==2:
+                    try:
+                        gene_name = gene_name_base + "_intron1"
+                        seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                        if gene_name not in self.mainD_nucl.keys():
+                            self.mainD_nucl[gene_name] = [seq_rec]
+                        else:
+                            self.mainD_nucl[gene_name].append(seq_rec)
+                    except:
+                        log.warning("\tAn error for `%s` occurred." % (gene_name))
+                        pass
+                if len(feature.location.parts)==3:
+                    copy_feature = copy.deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
+                    try:
+                        gene_name = gene_name_base + "_intron1"
+                        seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                        if gene_name not in self.mainD_nucl.keys():
+                            self.mainD_nucl[gene_name] = [seq_rec]
+                        else:
+                            self.mainD_nucl[gene_name].append(seq_rec)
+                    except:
+                        log.critical("\tAn error occurred for `%s`" % (gene_name))
+                        raise Exception()
+                        #pass
+                    feature = copy_feature
+                    try:
+                        gene_name = gene_name_base + "_intron2"
+                        seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 1, log)
+                        if gene_name not in mainD_intron2.keys():
+                            mainD_intron2[gene_name] = [seq_rec]
+                        else:
+                            mainD_intron2[gene_name].append(seq_rec)
+                    except:
+                        log.warning("\tAn issue occurred for `%s`" % (gene_name))
+                        pass
+
+#-----------------------------------------------------------------#
+
+def conduct_backtranslation(mainD_prot, outDir, log):
         # Step 1. Write unaligned protein sequences to file
-        if masterdict_prot.items():
-            for k,v in masterdict_prot.items():
+        if mainD_prot.items():
+            for k,v in mainD_prot.items():
                 outFn_unalign_prot = os.path.join(outDir, 'prot_'+k+'.unalign.fasta')
                 outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
                 with open(outFn_unalign_prot, 'w') as hndl:
@@ -83,7 +195,7 @@ def conduct_backtranslation(masterdict_prot, outDir, log):
 
         # Step 5. Conduct actual back-translation via Python script by Peter Cook
         # https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
-        for k,v in masterdict_prot.items():
+        for k,v in mainD_prot.items():
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
             outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
             outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
@@ -95,113 +207,6 @@ def conduct_backtranslation(masterdict_prot, outDir, log):
                 raise Exception()
 
 #------------------------------------------------------------------------------#
-def extract_collect_IGS(masterdict_nucl, rec, fname, len_cutoff, log):
-    # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
-    # Resulting list contains adjacent features in order of appearance on genome
-    # Note 1: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
-    # Note 2: The statement "if feature.qualifier['gene'][0] not 'matK'" is necessary, as matK is located inside trnK
-    all_genes = [feature for feature in rec.features if (feature.type=='gene' and feature.qualifiers['gene'][0]!='matK')]
-    # LOOP THROUGH GENES
-    for count, idx in enumerate(range(0, len(all_genes)-1), 1):
-        cur_feat = all_genes[idx]
-        cur_feat_name = cur_feat.qualifiers['gene'][0]
-        adj_feat = all_genes[idx+1]
-        adj_feat_name = adj_feat.qualifiers['gene'][0]
-        # Define names of IGS
-        if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
-            cur_feat_name = cur_feat_name
-            cur_feat_name_SAFE = cur_feat_name.replace('-','_')
-            cur_feat_name_SAFE = re.sub(r'[^\w]', '', cur_feat_name_SAFE)
-            adj_feat_name = adj_feat_name
-            adj_feat_name_SAFE = adj_feat_name.replace('-','_')
-            adj_feat_name_SAFE = re.sub(r'[^\w]', '', adj_feat_name_SAFE)
-            IGS_name = cur_feat_name_SAFE + '_' + adj_feat_name_SAFE
-            inv_IGS_name = adj_feat_name_SAFE + '_' + cur_feat_name_SAFE
-            # Exclude all genes with compound locations (as it only messes things up)
-            if type(cur_feat.location) is not Bio.SeqFeature.CompoundLocation and \
-            type(adj_feat.location) is not Bio.SeqFeature.CompoundLocation:
-                # Make IGS SeqFeature
-                start_pos = Bio.SeqFeature.ExactPosition(cur_feat.location.end) #+1)  Note: It's unclear if a +1 is needed here.
-                end_pos = Bio.SeqFeature.ExactPosition(adj_feat.location.start)
-                if int(start_pos) >= int(end_pos):
-                    continue    # If there is no IGS, then simply skip this gene pair
-                else:
-                    try:
-                        exact_location = Bio.SeqFeature.FeatureLocation(start_pos, end_pos)
-                    except:
-                        log.warning('\t%s Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ) . Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
-                        continue
-                # Make IGS SeqRecord
-                seq_obj = exact_location.extract(rec).seq
-                seq_name = IGS_name + '_' + rec.name
-                seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                # Length cutoff value
-                if len(seq_obj) >= len_cutoff:
-                    pass
-                else:
-                    continue
-                # ATTACH SEQRECORD TO GROWING DICTIONARY
-                if IGS_name in masterdict_nucl.keys() or inv_IGS_name in masterdict_nucl.keys():
-                    if IGS_name in masterdict_nucl.keys():
-                        tmp = masterdict_nucl[IGS_name]
-                        tmp.append(seq_rec)
-                        masterdict_nucl[IGS_name] = tmp
-                    if inv_IGS_name in masterdict_nucl.keys():
-                        pass  # Don't count IGS in the IRs twice
-                else:
-                    masterdict_nucl[IGS_name] = [seq_rec]
-            # Handle genes with compound locations
-            else:
-                log.warning("\t%s The IGS between `%s` and `%s` is currently not handled and has to be manually extracted" % (fname, cur_feat_name, adj_feat_name))
-                continue
-
-#------------------------------------------------------------------------------#
-def extract_collect_INT(masterdict_intron1, masterdict_intron2, rec, log):
-    for feature in rec.features:
-        if feature.type == 'CDS':
-            try:
-                gene_name_base = feature.qualifiers['gene'][0]
-            except:
-                log.warning("\tUnable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (feature.location.start, rec.id))
-                continue
-
-            ## Limiting the search to CDS containing introns
-            if len(feature.location.parts)==2:
-                try:
-                    gene_name = gene_name_base + "_intron1"
-                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
-                    if gene_name not in masterdict_intron1.keys():
-                        masterdict_intron1[gene_name] = [seq_rec]
-                    else:
-                        masterdict_intron1[gene_name].append(seq_rec)
-                except:
-                    log.warning("\tAn error for `%s` occurred." % (gene_name))
-                    pass
-
-            if len(feature.location.parts)==3:
-                copy_feature = copy.deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
-                try:
-                    gene_name = gene_name_base + "_intron1"
-                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
-                    if gene_name not in masterdict_intron1.keys():
-                        masterdict_intron1[gene_name] = [seq_rec]
-                    else:
-                        masterdict_intron1[gene_name].append(seq_rec)
-                except:
-                    log.critical("\tAn error occurred for `%s`" % (gene_name))
-                    raise Exception()
-                    #pass
-                feature = copy_feature
-                try:
-                    gene_name = gene_name_base + "_intron2"
-                    seq_rec,gene_name = extract_INT_internal(rec, feature, gene_name, 1, log)
-                    if gene_name not in masterdict_intron2.keys():
-                        masterdict_intron2[gene_name] = [seq_rec]
-                    else:
-                        masterdict_intron2[gene_name].append(seq_rec)
-                except:
-                    log.warning("\tAn issue occurred for `%s`" % (gene_name))
-                    pass
 
 def extract_INT_internal(rec, feature, gene_name, offset, log):
             try:
@@ -260,55 +265,51 @@ def main(args):
         coloredlogs.install(fmt='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO, logger=log)
     #--------------------------------------------------------------------------#
     # SET UP EMPTY ORDERED DICTIONARIES
-    # CDS
-    masterdict_nucl = collections.OrderedDict()
-    masterdict_prot = collections.OrderedDict()
-    # IGS
-    masterdict_nucl = collections.OrderedDict()
-    # INT
-    masterdict_intron1 = collections.OrderedDict()
-    masterdict_intron2 = collections.OrderedDict()
+    mainD_nucl = collections.OrderedDict()
+    if select_mode == 'cds':
+        mainD_prot = collections.OrderedDict()
+    if select_mode == 'int':
+        mainD_intron2 = collections.OrderedDict()
     #--------------------------------------------------------------------------#
     # EXTRACT AND COLLECT INT FROM RECORDS
     files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
-        log.info('\tProcessing file `%s`' % (f))
+        log.info('\tReading file `%s`' % (f))
         rec = Bio.SeqIO.read(os.path.join(inDir, f), 'genbank')
         if select_mode == 'cds':
-            extract_collect_CDS(masterdict_nucl, masterdict_prot, rec, len_cutoff)
+            ExtractAndCollect(mainD_nucl).do_CDS(mainD_prot, rec, len_cutoff, log)
         if select_mode == 'igs':
-            extract_collect_IGS(masterdict_nucl, rec, f, len_cutoff, log)
+            ExtractAndCollect(mainD_nucl).do_IGS(rec, f, len_cutoff, log)
         if select_mode == 'int':
-            extract_collect_INT(masterdict_intron1, masterdict_intron2, rec, log)
-            masterdict_intron1.update(masterdict_intron2)
-            masterdict_nucl = masterdict_intron1
+            ExtractAndCollect(mainD_nucl).do_INT(mainD_intron2, rec, log)
+            mainD_nucl.update(mainD_intron2)
         # Check if masterdictionary empty
-        if not masterdict_nucl.items():
-            log.critical("\tNo items in masterdictionary" % outDir)
+        if not mainD_nucl.items():
+            log.critical("\tNo items in main dictionary" % outDir)
             raise Exception()
     #--------------------------------------------------------------------------#
     # REMOVE DUPLICATE ENTRIES
         # Note: Not sure why I have to run this removal twice, but not all
         #       duplicates are removed first time around.
-    remove_duplicates(masterdict_nucl)
-    remove_duplicates(masterdict_nucl)
+    remove_duplicates(mainD_nucl)
+    remove_duplicates(mainD_nucl)
     if select_mode == 'cds':
-        remove_duplicates(masterdict_prot)
-        remove_duplicates(masterdict_prot)
+        remove_duplicates(mainD_prot)
+        remove_duplicates(mainD_prot)
     #--------------------------------------------------------------------------#
     # REMOVE ENTRIES THAT OCCUR IN LESS THAN X TAXA
-    for k,v in masterdict_nucl.items():
+    for k,v in mainD_nucl.items():
         if len(v) < tax_cutoff:
-            del masterdict_nucl[k]
+            del mainD_nucl[k]
             if select_mode == 'cds':
-                del masterdict_prot[k]
+                del mainD_prot[k]
     #--------------------------------------------------------------------------#
     # REMOVE ORFs
-    list_of_orfs = [orf for orf in masterdict_nucl.keys() if "orf" in orf]
+    list_of_orfs = [orf for orf in mainD_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
-        del masterdict_nucl[orf]
+        del mainD_nucl[orf]
         if select_mode == 'cds':
-            del masterdict_prot[orf]
+            del mainD_prot[orf]
     #--------------------------------------------------------------------------#
     # REMOVE SPECIFIC GENES
     if exclude_list:
@@ -316,17 +317,17 @@ def main(args):
             to_be_excluded = [i+"_intron1" for i in exclude_list]+[i+"_intron2" for i in exclude_list]
             exclude_list = to_be_excluded
         for excluded in exclude_list:
-            if excluded in masterdict_nucl:
-                del masterdict_nucl[excluded]
+            if excluded in mainD_nucl:
+                del mainD_nucl[excluded]
                 if select_mode == 'cds':
-                    del masterdict_prot[excluded]
+                    del mainD_prot[excluded]
             else:
                 log.warning("\tRegion `%s` to be excluded but cannot be found in infile." % excluded)
                 pass
     #--------------------------------------------------------------------------#
     # WRITE UNALIGNED NUCLEOTIDE SEQUENCES TO FILE
-    if masterdict_nucl.items():
-        for k,v in masterdict_nucl.items():
+    if mainD_nucl.items():
+        for k,v in mainD_nucl.items():
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
             outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
             with open(outFn_unalign_nucl, 'w') as hndl:
@@ -344,11 +345,11 @@ def main(args):
     #--------------------------------------------------------------------------#
     # CONDUCT BACK-TRANSLATION
     if select_mode == 'cds':
-        conduct_backtranslation(masterdict_prot, outDir, log)
+        conduct_backtranslation(mainD_prot, outDir, log)
     #--------------------------------------------------------------------------#
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
     alignm_L = []
-    for k in masterdict_nucl.keys():
+    for k in mainD_nucl.keys():
         aligned_nucl_fasta = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
         aligned_nucl_nexus = os.path.join(outDir, 'nucl_'+k+'.aligned.nexus')
         # Convert FASTA alignment to NEXUS alignment
@@ -371,6 +372,9 @@ def main(args):
             raise Exception()
     #--------------------------------------------------------------------------#
     # COMBINE NEXUS ALIGNMENTS (IN NO PARTICULAR ORDER)
+    action = "combining NEXUS alignments (in no particular order)"
+    log.info("%s" % action)
+    ###
     alignm_combined = Bio.Nexus.Nexus.combine(alignm_L) # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
     outFn_nucl_combined_fasta = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.fasta')
     outFn_nucl_combined_nexus = os.path.join(outDir, 'nucl_'+str(len(alignm_L))+'combined.aligned.nexus')

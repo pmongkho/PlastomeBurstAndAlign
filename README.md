@@ -3,7 +3,7 @@ Extract and align coding regions, introns and intergenic spacers across a set of
 
 #### Exemplary usage
 ```
-MYSCRIPT=~/git/PlastomeRegionBurstAndAlign.py
+MYSCRIPT=~/git/PlastomeBurstAndAlign/PlastomeRegionBurstAndAlign.py
 
 folder_CDS=./output_CDS
 mkdir -p $folder_CDS
