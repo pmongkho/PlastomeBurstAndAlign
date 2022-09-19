@@ -93,7 +93,7 @@ class ExtractAndCollect:
                         try:
                             exact_location = Bio.SeqFeature.FeatureLocation(start_pos, end_pos)
                         except:
-                            log.warning('\t%s Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ) . Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
+                            log.warning('\t%s: Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ). Skipping this IGS ...' % (fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
                             continue
                     # Make IGS SeqRecord
                     seq_obj = exact_location.extract(rec).seq
@@ -116,7 +116,7 @@ class ExtractAndCollect:
                         self.mainD_nucl[IGS_name] = [seq_rec]
                 # Handle genes with compound locations
                 else:
-                    log.warning("\t%s The IGS between `%s` and `%s` is currently not handled and has to be extracted manually. Skipping this IGS ..." % (fname, cur_feat_name, adj_feat_name))
+                    log.warning("\t%s: the IGS between `%s` and `%s` is currently not handled and has to be extracted manually. Skipping this IGS ..." % (fname, cur_feat_name, adj_feat_name))
                     continue
 
     def do_INT(self, mainD_intron2, rec, log):
@@ -137,7 +137,7 @@ class ExtractAndCollect:
                         else:
                             self.mainD_nucl[gene_name].append(seq_rec)
                     except:
-                        log.warning("\tAn error for `%s` occurred." % (gene_name))
+                        log.warning("\tAn error for `%s` occurred" % (gene_name))
                         pass
                 if len(feature.location.parts)==3:
                     copy_feature = copy.deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
@@ -271,10 +271,13 @@ def main(args):
     if select_mode == 'int':
         mainD_intron2 = collections.OrderedDict()
     #--------------------------------------------------------------------------#
-    # EXTRACT AND COLLECT INT FROM RECORDS
+    # EXTRACT AND COLLECT ANNOTATIONS FROM RECORDS
+    action = "extracting annotations from genome records"
+    log.info("%s" % action)
+    ###
     files = [f for f in os.listdir(inDir) if f.endswith(fileext)]
     for f in files:
-        log.info('\tReading file `%s`' % (f))
+        log.info('reading file `%s`' % (f))
         rec = Bio.SeqIO.read(os.path.join(inDir, f), 'genbank')
         if select_mode == 'cds':
             ExtractAndCollect(mainD_nucl).do_CDS(mainD_prot, rec, len_cutoff, log)
@@ -288,16 +291,22 @@ def main(args):
             log.critical("\tNo items in main dictionary" % outDir)
             raise Exception()
     #--------------------------------------------------------------------------#
-    # REMOVE DUPLICATE ENTRIES
+    # REMOVE DUPLICATE ANNOTATIONS
         # Note: Not sure why I have to run this removal twice, but not all
         #       duplicates are removed first time around.
+    action = "removing duplicate annotations"
+    log.info("%s" % action)
+    ###
     remove_duplicates(mainD_nucl)
     remove_duplicates(mainD_nucl)
     if select_mode == 'cds':
         remove_duplicates(mainD_prot)
         remove_duplicates(mainD_prot)
     #--------------------------------------------------------------------------#
-    # REMOVE ENTRIES THAT OCCUR IN LESS THAN X TAXA
+    # REMOVE ANNOTATIONS THAT OCCUR IN FEWER THAN X TAXA
+    action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
+    log.info("%s" % action)
+    ###
     for k,v in mainD_nucl.items():
         if len(v) < tax_cutoff:
             del mainD_nucl[k]
@@ -396,7 +405,7 @@ def main(args):
     Bio.AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
     #--------------------------------------------------------------------------#
     # CLOSING
-    action = "End of script.\n"
+    action = "end of script\n"
     log.info("%s" % action)
     quit()
 
