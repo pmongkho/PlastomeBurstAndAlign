@@ -201,9 +201,11 @@ def conduct_backtranslation(mainD_prot, outDir, log):
             outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
             try:
                 cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
-                log = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+                log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             except:
-                log.critical("\tCannot conduct back-translation of `%s`. Command used: %s" % (k, ' '.join(cmd)))
+                cmd_prt = ' '.join(cmd)
+                log_prt = str(log_msg, 'utf-8')
+                log.critical("\tCannot conduct back-translation of `%s`. Command used: %s. Error message: %s" % (k, cmd_prt, log_prt))
                 raise Exception()
 
 #------------------------------------------------------------------------------#
