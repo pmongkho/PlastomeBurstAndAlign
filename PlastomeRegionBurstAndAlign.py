@@ -121,7 +121,7 @@ class ExtractAndCollect:
 
     def do_INT(self, mainD_intron2, rec, log):
         for feature in rec.features:
-            if feature.type == 'CDS':
+            if feature.type == 'CDS' or feature.type == 'tRNA':
                 try:
                     gene_name_base = feature.qualifiers['gene'][0]
                 except:
