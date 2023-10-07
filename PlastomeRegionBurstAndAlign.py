@@ -208,7 +208,7 @@ def conduct_backtranslation(mainD_prot, outDir, log):
             try:
                 
                 ## TO DO ##
-                # For some reason, stderr is not properly saved to log_msg, log_msg is always empty
+                # For some reason, stderr is not properly saved to log_msg in cases when the back-translation python package does not work; then log_msg is empty
                 
                 log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             except:
@@ -356,8 +356,8 @@ def main(args):
                 log.warning("\tRegion `%s` to be excluded but cannot be found in infile." % excluded)
                 pass
     #--------------------------------------------------------------------------#
-    # WRITE UNALIGNED NUCLEOTIDE SEQUENCES TO FILE
-    action = "writing unaligned nucleotide sequences to file"
+    # ALIGNING SEQUENCES BASED ON NUCLEOTIDES
+    action = "aligning sequences based on nucleotides"
     log.info("%s" % action)
     ###
     if mainD_nucl.items():

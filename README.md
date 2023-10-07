@@ -20,6 +20,7 @@ tar xzf benchmarking.tar.gz
 
 #### Exemplary usage
 ```
+# Adjust the following line if necessary
 MYSCRIPT=~/git/PlastomeBurstAndAlign/PlastomeRegionBurstAndAlign.py
 
 cd benchmarking/
