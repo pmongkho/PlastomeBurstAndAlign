@@ -35,6 +35,11 @@ class ExtractAndCollect:
                     gene_name = feature.qualifiers['gene'][0]
                     seq_name = gene_name + '_' + rec.name
                     # Nucleotide sequences
+                    
+                    ## TO DO ##
+                    # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line below:
+                    # Add function to check if len(sequence) not a multiple of three, as error message for NC_013553.gb suggests
+                    
                     seq_obj = feature.extract(rec).seq
                     seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     if gene_name in self.mainD_nucl.keys():
@@ -199,14 +204,18 @@ def conduct_backtranslation(mainD_prot, outDir, log):
             outFn_unalign_nucl = os.path.join(outDir, 'nucl_'+k+'.unalign.fasta')
             outFn_aligned_nucl = os.path.join(outDir, 'nucl_'+k+'.aligned.fasta')
             outFn_aligned_prot = os.path.join(outDir, 'prot_'+k+'.aligned.fasta')
+            cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
             try:
-                cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
+                
+                ## TO DO ##
+                # For some reason, stderr is not properly saved to log_msg, log_msg is always empty
+                
                 log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             except:
                 cmd_prt = ' '.join(cmd)
                 log_prt = str(log_msg, 'utf-8')
                 log.critical("\tCannot conduct back-translation of `%s`. Command used: %s. Error message: %s" % (k, cmd_prt, log_prt))
-                raise Exception()
+                #raise Exception()
 
 #------------------------------------------------------------------------------#
 
@@ -281,6 +290,11 @@ def main(args):
     for f in files:
         log.info('reading file `%s`' % (f))
         rec = Bio.SeqIO.read(os.path.join(inDir, f), 'genbank')
+
+        ## TO DO ##   
+        # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
+        # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
+        
         if select_mode == 'cds':
             ExtractAndCollect(mainD_nucl).do_CDS(mainD_prot, rec, len_cutoff, log)
         if select_mode == 'igs':
@@ -367,7 +381,10 @@ def main(args):
         action = "conducting back-translation"
         log.info("%s" % action)
         ###
-        conduct_backtranslation(mainD_prot, outDir, log)
+        try:
+            conduct_backtranslation(mainD_prot, outDir, log)
+        except:
+            log.critical("\tBack-translation of that item not produced ...")
     #--------------------------------------------------------------------------#
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
     action = "converting FASTA alignment to NEXUS alignment"

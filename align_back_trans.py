@@ -1,20 +1,9 @@
 #!/usr/bin/env python
 """Back-translate a protein alignment to nucleotides
-
 This tool is a short Python script (using Biopython library functions) to
 load a protein alignment, and matching nucleotide FASTA file of unaligned
 sequences, in order to produce a codon aware nucleotide alignment - which
 can be viewed as a back translation.
-
-The development repository for this tool is here:
-
-* https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
-
-This tool is available with a Galaxy wrapper from the Galaxy Tool Shed at:
-
-* http://toolshed.g2.bx.psu.edu/view/peterjc/align_back_trans
-
-See accompanying text file for licence details (MIT licence).
 """
 
 import sys
@@ -24,11 +13,6 @@ from Bio.Align import MultipleSeqAlignment
 from Bio import SeqIO
 from Bio import AlignIO
 from Bio.Data.CodonTable import ambiguous_generic_by_id
-
-if "-v" in sys.argv or "--version" in sys.argv:
-    print("v0.0.7")
-    sys.exit(0)
-
 
 def check_trans(identifier, nuc, prot, table):
     """Returns nucleotide sequence if works (can remove trailing stop)"""
@@ -52,7 +36,6 @@ def check_trans(identifier, nuc, prot, table):
         elif t.startswith(p):
             err += "\nThere are %i extra nucleotides at the end." % (len(t) - len(p))
         elif p in t:
-            # TODO - Calculate and report the number to trim at start and end?
             err += "\nHowever, protein sequence found within translated nucleotides."
         elif p[1:] in t:
             err += "\nHowever, ignoring first amino acid, protein sequence found within translated nucleotides."
@@ -61,7 +44,6 @@ def check_trans(identifier, nuc, prot, table):
     if t == p:
         return nuc
     elif p.startswith("M") and "M" + t[1:] == p:
-        # Close, was there a start codon?
         if str(nuc[0:3]).upper() in ambiguous_generic_by_id[table].start_codons:
             return nuc
         else:
@@ -69,7 +51,6 @@ def check_trans(identifier, nuc, prot, table):
                      "Would match if %s was a start codon (check correct table used)\n"
                      % (identifier, nuc[0:3].upper()))
     else:
-        # Allow * vs X here? e.g. internal stop codons
         m = "".join("." if x == y else "!" for (x, y) in zip(p, t))
         if len(prot) < 70:
             sys.stderr.write("Protein:     %s\n" % p)
@@ -84,12 +65,11 @@ def check_trans(identifier, nuc, prot, table):
 
 
 def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record, gap, table=0):
-    # TODO - Separate arguments for protein gap and nucleotide gap?
     if not gap or len(gap) != 1:
         raise ValueError("Please supply a single gap character")
 
-	######
-	# Modification on 09-Sep-2022 by Michael Gruenstaeudl
+    ######
+    # Modification on 09-Sep-2022 by Michael Gruenstaeudl
     #alpha = unaligned_nucleotide_record.seq.alphabet
     #if hasattr(alpha, "gap_char"):
     #    gap_codon = alpha.gap_char * 3
@@ -98,11 +78,10 @@ def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record,
     #    from Bio.Alphabet import Gapped
     #    alpha = Gapped(alpha, gap)
     #    gap_codon = gap * 3
-	######
+    ######
     gap_codon = '-' * 3
-		
 
-    ungapped_protein = aligned_protein_record.seq.ungap(gap)
+    ungapped_protein = aligned_protein_record.seq.replace(gap, "")
     ungapped_nucleotide = unaligned_nucleotide_record.seq
     if table:
         ungapped_nucleotide = check_trans(aligned_protein_record.id, ungapped_nucleotide, ungapped_protein, table)
@@ -127,14 +106,13 @@ def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record,
 
     aligned_nuc = unaligned_nucleotide_record[:]  # copy for most annotation
     aligned_nuc.letter_annotation = {}  # clear this
-    aligned_nuc.seq = Seq("".join(seq))	#, alpha)  # Modification on 09-Sep-2022 by Michael Gruenstaeudl
+    aligned_nuc.seq = Seq("".join(seq))    #, alpha)  # Modification on 09-Sep-2022 by Michael Gruenstaeudl
     assert len(aligned_protein_record.seq) * 3 == len(aligned_nuc)
     return aligned_nuc
 
 
 def alignment_back_translate(protein_alignment, nucleotide_records, key_function=None, gap=None, table=0):
     """Thread nucleotide sequences onto a protein alignment."""
-    # TODO - Separate arguments for protein and nucleotide gap characters?
     if key_function is None:
         key_function = lambda x: x
     if gap is None:
@@ -161,27 +139,7 @@ elif len(sys.argv) == 5:
 elif len(sys.argv) == 6:
     align_format, prot_align_file, nuc_fasta_file, nuc_align_file, table = sys.argv[1:]
 else:
-    sys.exit("""This is a Python script for 'back-translating' a protein alignment,
-
-It requires three, four or five arguments:
-- alignment format (e.g. fasta, clustal),
-- aligned protein file (in specified format),
-- unaligned nucleotide file (in fasta format).
-- aligned nucleotiode output file (in same format), optional.
-- NCBI translation table (0 for none), optional
-
-The nucleotide alignment is printed to stdout if no output filename is given.
-
-Example usage:
-
-$ python align_back_trans.py fasta demo_prot_align.fasta demo_nucs.fasta demo_nuc_align.fasta
-
-Warning: If the output file already exists, it will be overwritten.
-
-This script is available with sample data and a Galaxy wrapper here:
-https://github.com/peterjc/pico_galaxy/tree/master/tools/align_back_trans
-http://toolshed.g2.bx.psu.edu/view/peterjc/align_back_trans
-""")
+    sys.exit(0)
 
 try:
     table = int(table)
