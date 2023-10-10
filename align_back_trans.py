@@ -81,7 +81,7 @@ def sequence_back_translate(aligned_protein_record, unaligned_nucleotide_record,
     ######
     gap_codon = '-' * 3
 
-    ungapped_protein = aligned_protein_record.seq.replace(gap, "")
+    ungapped_protein = aligned_protein_record.seq.ungap(gap)
     ungapped_nucleotide = unaligned_nucleotide_record.seq
     if table:
         ungapped_nucleotide = check_trans(aligned_protein_record.id, ungapped_nucleotide, ungapped_protein, table)
