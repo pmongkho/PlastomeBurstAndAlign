@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm.gruenstaeudl@fu-berlin.de|2022-09-19T11:07:41 CEST'
+__version__ = 'm_gruenstaeudl@fhsu.edu|Mon 09 Oct 2023 08:18:54 PM CDT'
 #------------------------------------------------------------------------------#
 ## IMPORTS
 import argparse
@@ -368,8 +368,16 @@ def main(args):
                 Bio.SeqIO.write(v, hndl, 'fasta')
             #import subprocess
             #subprocess.call(['mafft', '--auto', outFn_unalign_nucl, '>', outFn_aligned_nucl])
-            mafft_cline = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_nucl, adjustdirection=True)
-            stdout, stderr = mafft_cline()
+
+            ## TO DO ##
+            # Automatically determine number of threads available #
+            # Have the number of threads saved as num_threads
+            
+            ## TO DO ##
+            # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
+
+            alignm_cmdlexec = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_nucl, adjustdirection=True) #,  thread=num_threads)
+            stdout, stderr = alignm_cmdlexec()
             with open(outFn_aligned_nucl, 'w') as hndl:
                 hndl.write(stdout)
     else:
