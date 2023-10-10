@@ -14,7 +14,7 @@ pip install coloredlogs
 
 #### Unpacking benchmark dataset
 ```
-tar xzf benchmarking.tar.gz
+tar xzf benchmarking1.tar.gz
 ```
 
 
@@ -23,7 +23,7 @@ tar xzf benchmarking.tar.gz
 # Adjust the following line if necessary
 MYSCRIPT=~/git/PlastomeBurstAndAlign/PlastomeRegionBurstAndAlign.py
 
-cd benchmarking/
+cd benchmarking1/
 ```
 
 ##### Extract and align coding regions
@@ -72,7 +72,7 @@ mv $folder_IGS/*.aligned.nexus $folder_IGS/02_aligned/nexus
 ##### Setting up benchmark
 ```
 apt install ncbi-entrez-direct  # on Debian
-cd benchmark
+cd benchmarking1
 while read accn; do
   efetch -db nucleotide -id $accn -format gb > ${accn}.gb;
 done <Accession_numbers_Asteraceae_YangEtAl2022.txt  # doi: 10.3389/fpls.2022.808156
