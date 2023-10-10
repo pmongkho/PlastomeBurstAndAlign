@@ -207,15 +207,20 @@ def conduct_backtranslation(mainD_prot, outDir, log):
             cmd = ['python3', path_to_back_transl_helper, 'fasta', outFn_aligned_prot, outFn_unalign_nucl, outFn_aligned_nucl, '11']
             try:
                 
-                ## TO DO ##
+                ## TO DO - BUG! ##
                 # For some reason, stderr is not properly saved to log_msg in cases when the back-translation python package does not work; then log_msg is empty
                 
                 log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             except:
                 cmd_prt = ' '.join(cmd)
-                log_prt = str(log_msg, 'utf-8')
-                log.critical("\tCannot conduct back-translation of `%s`. Command used: %s. Error message: %s" % (k, cmd_prt, log_prt))
-                #raise Exception()
+
+                ## TO DO - BUG! ##
+                # The following lines do not work because log_msg is empty, as indicated above.
+         
+                #log_prt = str(log_msg, 'utf-8')
+                #raise Exception("\tCannot conduct back-translation of `%s`. Command used: %s. Error message: %s" % (k, cmd_prt, log_prt))
+
+                raise Exception("\tCannot conduct back-translation of `%s`. Command used: %s." % (k, cmd_prt))
 
 #------------------------------------------------------------------------------#
 
@@ -356,8 +361,8 @@ def main(args):
                 log.warning("\tRegion `%s` to be excluded but cannot be found in infile." % excluded)
                 pass
     #--------------------------------------------------------------------------#
-    # ALIGNING SEQUENCES BASED ON NUCLEOTIDES
-    action = "aligning sequences based on nucleotides"
+    # MULTIPLE SEQUENCE ALIGNMENT BASED ON NUCLEOTIDE SEQUENCE DATA
+    action = "conducting multiple sequence alignment based on nucleotide sequence data"
     log.info("%s" % action)
     ###
     if mainD_nucl.items():
@@ -372,11 +377,12 @@ def main(args):
             ## TO DO ##
             # Automatically determine number of threads available #
             # Have the number of threads saved as num_threads
+            num_threads = 1
             
             ## TO DO ##
             # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
 
-            alignm_cmdlexec = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_nucl, adjustdirection=True) #,  thread=num_threads)
+            alignm_cmdlexec = Bio.Align.Applications.MafftCommandline(input=outFn_unalign_nucl, adjustdirection=True, thread=num_threads)
             stdout, stderr = alignm_cmdlexec()
             with open(outFn_aligned_nucl, 'w') as hndl:
                 hndl.write(stdout)
@@ -386,13 +392,13 @@ def main(args):
     #--------------------------------------------------------------------------#
     # CONDUCT BACK-TRANSLATION
     if select_mode == 'cds':
-        action = "conducting back-translation"
+        action = "conducting back-translation of multiple sequence alignments"
         log.info("%s" % action)
         ###
         try:
             conduct_backtranslation(mainD_prot, outDir, log)
-        except:
-            log.critical("\tBack-translation of that item not produced ...")
+        except Exception as e:
+            log.critical("\tBack-translation unsuccessful for the following gene: %s" % (e))
     #--------------------------------------------------------------------------#
     # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
     action = "converting FASTA alignment to NEXUS alignment"
