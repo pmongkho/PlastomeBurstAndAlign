@@ -293,7 +293,15 @@ def setup_logger(verbose):
 
 def unpack_input_parameters(args):
     in_dir = args.inpd
+    if not os.path.exists(in_dir):
+        logging.critical("Input directory `%s` does not exist." % in_dir)
+        raise Exception()
+    global out_dir
     out_dir = args.outd
+    if not os.path.exists(out_dir):
+        logging.critical("Output directory `%s` does not exist." % out_dir)
+        raise Exception()
+    
     fileext = args.fileext
     exclude_list = args.excllist
     len_cutoff = args.lencutoff
@@ -309,12 +317,22 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, lo
 
     action = "extracting annotations from genome records"
     log.info("%s" % action)
-
+    ###
     files = [f for f in os.listdir(in_dir) if f.endswith(fileext)]
     for f in files:
         log.info('reading file `%s`' % (f))
+        ###
         rec = SeqIO.read(os.path.join(in_dir, f), 'genbank')
 
+        ## TO DO ##
+        # Integrate taxcutoff in ExtractAndCollect(main_d_nucl).do_CDS
+        #						 ExtractAndCollect(main_d_nucl).do_IGS
+        #						 ExtractAndCollect(main_d_nucl).do_INT
+
+        ## TO DO ##   
+        # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
+        # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
+            
         if select_mode == 'cds':
             ExtractAndCollect(main_d_nucl).do_CDS(main_d_prot, rec, len_cutoff, log)
         if select_mode == 'igs':
@@ -324,12 +342,15 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, lo
             main_d_nucl.update(main_d_intron2)
 
         if not main_d_nucl.items():
-            log.critical("No items in main dictionary")
+            log.critical("No items in main dictionary: %s" % out_dir)
             raise Exception()
 
     return main_d_nucl, main_d_prot
 
 def remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff):
+    action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
+    log.info("%s" % action)
+    ###
     for k, v in main_d_nucl.items():
         if len(v) < tax_cutoff:
             del main_d_nucl[k]
@@ -337,6 +358,9 @@ def remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff):
                 del main_d_prot[k]
 
 def remove_orfs(main_d_nucl, main_d_prot):
+    action = "removing ORFs"
+    log.info("%s" % action)
+    ###
     list_of_orfs = [orf for orf in main_d_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
         del main_d_nucl[orf]
@@ -344,6 +368,9 @@ def remove_orfs(main_d_nucl, main_d_prot):
             del main_d_prot[orf]
 
 def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode, log):
+    action = "removing user-defined genes"
+    log.info("%s" % action)
+    ###
     if exclude_list:
         if select_mode == 'int':
             to_be_excluded = [i + "_intron1" for i in exclude_list] + [i + "_intron2" for i in exclude_list]
@@ -360,7 +387,7 @@ def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mod
 def extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir):
     action = "extracting and combining nucleotide sequences genewise"
     log.info("%s" % action)
-
+    ###
     for k, v in main_d_nucl.items():
         out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
         with open(out_fn_unalign_nucl, 'w') as hndl:
@@ -369,12 +396,24 @@ def extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir):
 def multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir):
     action = "conducting multiple sequence alignment based on nucleotide sequence data"
     log.info("%s" % action)
-
+    ###
     if main_d_nucl.items():
         for k, v in main_d_nucl.items():
             out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
             out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
+
+            # import subprocess
+            # subprocess.call(['mafft', '--auto', out_fn_unalign_nucl, '>', out_fn_aligned_nucl])
+
+            ## TO DO ##
+            # Automatically determine number of threads available #
+            # Have the number of threads saved as num_threads
+            
             num_threads = 1
+
+            ## TO DO ##
+            # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
+            
             alignm_cmdlexec = Applications.MafftCommandline(input=out_fn_unalign_nucl, adjustdirection=True, thread=num_threads)
             stdout, stderr = alignm_cmdlexec()
             with open(out_fn_aligned_nucl, 'w') as hndl:
@@ -386,6 +425,7 @@ def multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir):
 def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log):
     action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
     log.info("%s" % action)
+    ###
     try:
         proteinalign_and_backtranslate(main_d_prot, out_dir, log)
     except:
@@ -394,26 +434,35 @@ def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log):
 def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
     action = "converting FASTA alignment to NEXUS alignment"
     log.info("%s" % action)
+    ###
     successList = []
 
     for k in main_d_nucl.keys():
         aligned_nucl_fasta = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
         aligned_nucl_nexus = os.path.join(out_dir, 'nucl_' + k + '.aligned.nexus')
+        # Convert FASTA alignment to NEXUS alignment
         try:
             AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             log.warning("Unable to convert alignment of `%s` from FASTA to NEXUS" % k)
-            continue
+            # raise Exception()
+
+            continue  # skip to next k in loop, so that k is not included in successList
+        # Import NEXUS and append to list for concatenation
         try:
+            # ipdb.set_trace()
+
             alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = io.StringIO()
             AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
-            nexus_string = nexus_string.replace('\n' + k + '_', '\nconcatenated_')
+            nexus_string = nexus_string.replace('\n' + k + '_', '\nconcatenated_') # IMPORTANT: Stripping the gene name from the sequence name
+            ###
             alignm_nexus = Nexus.Nexus.Nexus(nexus_string)
-            successList.append((k, alignm_nexus))
+            successList.append((k, alignm_nexus))  # Function 'Nexus.Nexus.combine' needs a tuple.
         except:
             log.warning("Unable to add alignment of `%s` to concatenation" % k)
+            # raise Exception()
             pass
 
     return successList
@@ -421,16 +470,20 @@ def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
 def concatenate_alignments(successList, out_dir):
     action = "concatenate alignments (in no particular order)"
     log.info("%s" % action)
+    ###
+    # Define output names
     out_fn_nucl_concatenated_fasta = os.path.join(out_dir, 'nucl_' + str(len(successList)) + 'concatenated.aligned.fasta')
     out_fn_nucl_concatenated_nexus = os.path.join(out_dir, 'nucl_' + str(len(successList)) + 'concatenated.aligned.nexus')
-
+    # Do concatenation
     try:
-        alignm_concatenated = Nexus.Nexus.combine(successList)
+        alignm_concatenated = Nexus.Nexus.combine(successList)  # Function 'Nexus.Nexus.combine' needs a tuple.
     except:
         log.critical("Unable to concatenate alignments")
         raise Exception()
-    
+
+    # Write concatenated alignment to file in NEXUS format
     alignm_concatenated.write_nexus_data(filename=open(out_fn_nucl_concatenated_nexus, 'w'))
+    # Convert concatenated alignment in NEXUS format to FASTA format
     AlignIO.convert(out_fn_nucl_concatenated_nexus, 'nexus', out_fn_nucl_concatenated_fasta, 'fasta')
 
 # ------------------------------------------------------------------------------#
@@ -442,6 +495,9 @@ def main(args):
     
     main_d_nucl, main_d_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, log)
 
+    action = "removing duplicate annotations"
+    log.info("%s" % action)
+    ###
     remove_duplicates(main_d_nucl)
     remove_duplicates(main_d_nucl)
     
@@ -466,9 +522,8 @@ def main(args):
     
     action = "end of script\n"
     log.info("%s" % action)
+    ###
     quit()
-
-
 
 # ------------------------------------------------------------------------------#
 # ARGPARSE
