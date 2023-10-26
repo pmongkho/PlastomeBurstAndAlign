@@ -5,9 +5,9 @@ __version__ = 'm_gruenstaeudl@fhsu.edu|Mon 09 Oct 2023 08:18:54 PM CDT'
 # ------------------------------------------------------------------------------#
 ## IMPORTS
 import argparse
-import Bio
-from Bio import SeqIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
+from Bio import SeqIO, Nexus, SeqRecord, AlignIO  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
+from Bio.SeqFeature import FeatureLocation, CompoundLocation, ExactPosition
 import coloredlogs
 import collections
 import copy
@@ -44,7 +44,7 @@ class ExtractAndCollect:
                     # Add function to check if len(sequence) not a multiple of three, as error message for NC_013553.gb suggests
 
                     seq_obj = feature.extract(rec).seq
-                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     if gene_name in self.main_d_nucl.keys():
                         tmp = self.main_d_nucl[gene_name]
                         tmp.append(seq_rec)
@@ -53,7 +53,7 @@ class ExtractAndCollect:
                         self.main_d_nucl[gene_name] = [seq_rec]
                     # Protein sequences
                     seq_obj = feature.extract(rec).seq.translate(table=11)  # , cds=True)
-                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     # Length cutoff value
                     if len(seq_obj) >= len_cutoff:
                         pass
@@ -96,17 +96,17 @@ class ExtractAndCollect:
                 IGS_name = cur_feat_name_SAFE + '_' + adj_feat_name_SAFE
                 inv_IGS_name = adj_feat_name_SAFE + '_' + cur_feat_name_SAFE
                 # Exclude all genes with compound locations (as it only messes things up)
-                if type(cur_feat.location) is not Bio.SeqFeature.CompoundLocation and \
-                        type(adj_feat.location) is not Bio.SeqFeature.CompoundLocation:
+                if type(cur_feat.location) is not CompoundLocation and \
+                        type(adj_feat.location) is not CompoundLocation:
                     # Make IGS SeqFeature
-                    start_pos = Bio.SeqFeature.ExactPosition(
+                    start_pos = ExactPosition(
                         cur_feat.location.end)  # +1)  Note: It's unclear if a +1 is needed here.
-                    end_pos = Bio.SeqFeature.ExactPosition(adj_feat.location.start)
+                    end_pos = ExactPosition(adj_feat.location.start)
                     if int(start_pos) >= int(end_pos):
                         continue  # If there is no IGS, then simply skip this gene pair
                     else:
                         try:
-                            exact_location = Bio.SeqFeature.FeatureLocation(start_pos, end_pos)
+                            exact_location = FeatureLocation(start_pos, end_pos)
                         except:
                             log.warning(
                                 '\t%s: Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ). Skipping this IGS ...' % (
@@ -115,7 +115,7 @@ class ExtractAndCollect:
                     # Make IGS SeqRecord
                     seq_obj = exact_location.extract(rec).seq
                     seq_name = IGS_name + '_' + rec.name
-                    seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     # Length cutoff value
                     if len(seq_obj) >= len_cutoff:
                         pass
@@ -248,13 +248,13 @@ def mafft_align(input_file, output_file):
 
 
 # ------------------------------------------------------------------------------#
-
+# not being used?
 def extract_INT_internal(rec, feature, gene_name, offset, log):
     try:
-        feature.location = Bio.SeqFeature.FeatureLocation(feature.location.parts[offset].end,
+        feature.location = FeatureLocation(feature.location.parts[offset].end,
                                                           feature.location.parts[offset + 1].start)
     except:
-        feature.location = Bio.SeqFeature.FeatureLocation(feature.location.parts[offset + 1].start,
+        feature.location = FeatureLocation(feature.location.parts[offset + 1].start,
                                                           feature.location.parts[offset].end)
     try:
         seq_name = gene_name + '_' + rec.name
@@ -281,48 +281,48 @@ def remove_duplicates(my_dict):
 
 
 # ------------------------------------------------------------------------------#
-## MAIN
+## MAIN HELPER FUNCTIONS
 # ------------------------------------------------------------------------------#
-def main(args):
-    # --------------------------------------------------------------------------#
-    # UNPACKING INPUT PARAMETERS
+def setup_logger(verbose):
+    global log
+    log = logging.getLogger(__name__)
+    log_format = '%(asctime)s [%(levelname)s] %(message)s'
+    log_level = logging.DEBUG if verbose else logging.INFO
+    coloredlogs.install(fmt=log_format, level=log_level, logger=log)
+    return log
+
+def unpack_input_parameters(args):
     in_dir = args.inpd
     if not os.path.exists(in_dir):
         logging.critical("Input directory `%s` does not exist." % in_dir)
         raise Exception()
+    global out_dir
     out_dir = args.outd
     if not os.path.exists(out_dir):
         logging.critical("Output directory `%s` does not exist." % out_dir)
         raise Exception()
+    
     fileext = args.fileext
     exclude_list = args.excllist
     len_cutoff = args.lencutoff
     tax_cutoff = args.taxcutoff
     select_mode = args.selectmode.lower()
     verbose = args.verbose
-    # --------------------------------------------------------------------------#
-    # SET UP LOGGER
-    log = logging.getLogger(__name__)
-    if verbose:
-        coloredlogs.install(fmt='%(asctime)s [%(levelname)s] %(message)s', level=logging.DEBUG, logger=log)
-    else:
-        coloredlogs.install(fmt='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO, logger=log)
-    # --------------------------------------------------------------------------#
-    # SET UP EMPTY ORDERED DICTIONARIES
+    return in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose
+
+def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, log):
     main_d_nucl = collections.OrderedDict()
-    if select_mode == 'cds':
-        main_d_prot = collections.OrderedDict()
-    if select_mode == 'int':
-        main_d_intron2 = collections.OrderedDict()
-    # --------------------------------------------------------------------------#
-    # EXTRACT AND COLLECT ANNOTATIONS FROM RECORDS
+    main_d_prot = collections.OrderedDict() if select_mode == 'cds' else None
+    main_d_intron2 = collections.OrderedDict() if select_mode == 'int' else None
+
     action = "extracting annotations from genome records"
     log.info("%s" % action)
     ###
     files = [f for f in os.listdir(in_dir) if f.endswith(fileext)]
     for f in files:
         log.info('reading file `%s`' % (f))
-        rec = Bio.SeqIO.read(os.path.join(in_dir, f), 'genbank')
+        ###
+        rec = SeqIO.read(os.path.join(in_dir, f), 'genbank')
 
         ## TO DO ##
         # Integrate taxcutoff in ExtractAndCollect(main_d_nucl).do_CDS
@@ -332,7 +332,7 @@ def main(args):
         ## TO DO ##   
         # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
         # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
-
+            
         if select_mode == 'cds':
             ExtractAndCollect(main_d_nucl).do_CDS(main_d_prot, rec, len_cutoff, log)
         if select_mode == 'igs':
@@ -340,44 +340,34 @@ def main(args):
         if select_mode == 'int':
             ExtractAndCollect(main_d_nucl).do_INT(main_d_intron2, rec, log)
             main_d_nucl.update(main_d_intron2)
-        # Check if main dictionary empty
+
         if not main_d_nucl.items():
-            log.critical("No items in main dictionary" % out_dir)
+            log.critical("No items in main dictionary: %s" % out_dir)
             raise Exception()
-    # --------------------------------------------------------------------------#
-    # REMOVE DUPLICATE ANNOTATIONS
-    # Note: Not sure why I have to run this removal twice, but not all
-    #       duplicates are removed first time around.
-    action = "removing duplicate annotations"
-    log.info("%s" % action)
-    ###
-    remove_duplicates(main_d_nucl)
-    remove_duplicates(main_d_nucl)
-    if select_mode == 'cds':
-        remove_duplicates(main_d_prot)
-        remove_duplicates(main_d_prot)
-    # --------------------------------------------------------------------------#
-    # REMOVE ANNOTATIONS THAT OCCUR IN FEWER THAN X TAXA
+
+    return main_d_nucl, main_d_prot
+
+def remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff):
     action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
     log.info("%s" % action)
     ###
     for k, v in main_d_nucl.items():
         if len(v) < tax_cutoff:
             del main_d_nucl[k]
-            if select_mode == 'cds':
+            if main_d_prot:
                 del main_d_prot[k]
-    # --------------------------------------------------------------------------#
-    # REMOVE ORFs
+
+def remove_orfs(main_d_nucl, main_d_prot):
     action = "removing ORFs"
     log.info("%s" % action)
     ###
     list_of_orfs = [orf for orf in main_d_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
         del main_d_nucl[orf]
-        if select_mode == 'cds':
+        if main_d_prot:
             del main_d_prot[orf]
-    # --------------------------------------------------------------------------#
-    # REMOVE USER-DEFINED GENES
+
+def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode, log):
     action = "removing user-defined genes"
     log.info("%s" % action)
     ###
@@ -388,94 +378,96 @@ def main(args):
         for excluded in exclude_list:
             if excluded in main_d_nucl:
                 del main_d_nucl[excluded]
-                if select_mode == 'cds':
+                if select_mode == 'cds' and main_d_prot:
                     del main_d_prot[excluded]
             else:
                 log.warning("Region `%s` to be excluded but unable to be found in infile." % excluded)
                 pass
-    # --------------------------------------------------------------------------#
-    # EXTRACTING AND COMBINING NUCLEOTIDE SEQUENCES GENEWISE
+
+def extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir):
     action = "extracting and combining nucleotide sequences genewise"
+    log.info("%s" % action)
+    ###
+    for k, v in main_d_nucl.items():
+        out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
+        with open(out_fn_unalign_nucl, 'w') as hndl:
+            SeqIO.write(v, hndl, 'fasta')
+
+def multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir):
+    action = "conducting multiple sequence alignment based on nucleotide sequence data"
     log.info("%s" % action)
     ###
     if main_d_nucl.items():
         for k, v in main_d_nucl.items():
             out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
-            with open(out_fn_unalign_nucl, 'w') as hndl:
-                Bio.SeqIO.write(v, hndl, 'fasta')
+            out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
 
-    # --------------------------------------------------------------------------#
-    # MULTIPLE SEQUENCE ALIGNMENT BASED ON NUCLEOTIDE SEQUENCE DATA
-    if not select_mode == 'cds':
-        action = "conducting multiple sequence alignment based on nucleotide sequence data"
-        log.info("%s" % action)
-        ###
-        if main_d_nucl.items():
-            for k, v in main_d_nucl.items():
-                out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
-                out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
-                # import subprocess
-                # subprocess.call(['mafft', '--auto', out_fn_unalign_nucl, '>', out_fn_aligned_nucl])
+            # import subprocess
+            # subprocess.call(['mafft', '--auto', out_fn_unalign_nucl, '>', out_fn_aligned_nucl])
 
-                ## TO DO ##
-                # Automatically determine number of threads available #
-                # Have the number of threads saved as num_threads
-                num_threads = 1
+            ## TO DO ##
+            # Automatically determine number of threads available #
+            # Have the number of threads saved as num_threads
+            
+            num_threads = 1
 
-                ## TO DO ##
-                # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
+            ## TO DO ##
+            # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
+            
+            alignm_cmdlexec = Applications.MafftCommandline(input=out_fn_unalign_nucl, adjustdirection=True, thread=num_threads)
+            stdout, stderr = alignm_cmdlexec()
+            with open(out_fn_aligned_nucl, 'w') as hndl:
+                hndl.write(stdout)
+    else:
+        log.critical("No items in nucleotide main dictionary to process")
+        raise Exception()
 
-                alignm_cmdlexec = Bio.Align.Applications.MafftCommandline(input=out_fn_unalign_nucl,
-                                                                          adjustdirection=True, thread=num_threads)
-                stdout, stderr = alignm_cmdlexec()
-                with open(out_fn_aligned_nucl, 'w') as hndl:
-                    hndl.write(stdout)
-        else:
-            log.critical("No items in nucleotide main dictionary to process")
-            raise Exception()
-    # --------------------------------------------------------------------------#
-    # CONDUCT PROTEIN ALIGNMENT AND BACK-TRANSLATION TO NUCLEOTIDES
-    if select_mode == 'cds':
-        action = "conducting multiple sequence alignment based on protein sequence data, followed by a back-translation to nucleotides"
-        log.info("%s" % action)
-        ###
-        try:
-            proteinalign_and_backtranslate(main_d_prot, out_dir, log)
-        except:
-            raise Exception()
-    # --------------------------------------------------------------------------#
-    # CONVERT FASTA ALIGNMENT TO NEXUS ALIGNMENT AND APPEND TO LIST
+def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log):
+    action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
+    log.info("%s" % action)
+    ###
+    try:
+        proteinalign_and_backtranslate(main_d_prot, out_dir, log)
+    except:
+        raise Exception()
+
+def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
     action = "converting FASTA alignment to NEXUS alignment"
     log.info("%s" % action)
     ###
     successList = []
+
     for k in main_d_nucl.keys():
         aligned_nucl_fasta = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
         aligned_nucl_nexus = os.path.join(out_dir, 'nucl_' + k + '.aligned.nexus')
         # Convert FASTA alignment to NEXUS alignment
         try:
-            Bio.AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
+            AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             log.warning("Unable to convert alignment of `%s` from FASTA to NEXUS" % k)
             # raise Exception()
+
             continue  # skip to next k in loop, so that k is not included in successList
         # Import NEXUS and append to list for concatenation
         try:
             # ipdb.set_trace()
-            alignm_nexus = Bio.AlignIO.read(aligned_nucl_nexus, 'nexus')
+
+            alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = io.StringIO()
-            Bio.AlignIO.write(alignm_nexus, hndl, 'nexus')
+            AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
-            nexus_string = nexus_string.replace('\n' + k + '_',
-                                                '\nconcatenated_')  # IMPORTANT: Stripping the gene name from the sequence name
-            alignm_nexus = Bio.Nexus.Nexus.Nexus(nexus_string)
-            successList.append((k, alignm_nexus))  # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
+            nexus_string = nexus_string.replace('\n' + k + '_', '\nconcatenated_') # IMPORTANT: Stripping the gene name from the sequence name
+            ###
+            alignm_nexus = Nexus.Nexus.Nexus(nexus_string)
+            successList.append((k, alignm_nexus))  # Function 'Nexus.Nexus.combine' needs a tuple.
         except:
             log.warning("Unable to add alignment of `%s` to concatenation" % k)
             # raise Exception()
             pass
-    # --------------------------------------------------------------------------#
-    # CONCATENATE ALIGNMENTS (IN NO PARTICULAR ORDER)
+
+    return successList
+
+def concatenate_alignments(successList, out_dir):
     action = "concatenate alignments (in no particular order)"
     log.info("%s" % action)
     ###
@@ -484,20 +476,54 @@ def main(args):
     out_fn_nucl_concatenated_nexus = os.path.join(out_dir, 'nucl_' + str(len(successList)) + 'concatenated.aligned.nexus')
     # Do concatenation
     try:
-        alignm_concatenated = Bio.Nexus.Nexus.combine(successList)  # Function 'Bio.Nexus.Nexus.combine' needs a tuple.
+        alignm_concatenated = Nexus.Nexus.combine(successList)  # Function 'Nexus.Nexus.combine' needs a tuple.
     except:
         log.critical("Unable to concatenate alignments")
         raise Exception()
+
     # Write concatenated alignment to file in NEXUS format
     alignm_concatenated.write_nexus_data(filename=open(out_fn_nucl_concatenated_nexus, 'w'))
     # Convert concatenated alignment in NEXUS format to FASTA format
-    Bio.AlignIO.convert(out_fn_nucl_concatenated_nexus, 'nexus', out_fn_nucl_concatenated_fasta, 'fasta')
-    # --------------------------------------------------------------------------#
-    # CLOSING
+    AlignIO.convert(out_fn_nucl_concatenated_nexus, 'nexus', out_fn_nucl_concatenated_fasta, 'fasta')
+
+# ------------------------------------------------------------------------------#
+## MAIN
+# ------------------------------------------------------------------------------#
+def main(args):
+    in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose = unpack_input_parameters(args)
+    log = setup_logger(verbose)
+    
+    main_d_nucl, main_d_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, log)
+
+    action = "removing duplicate annotations"
+    log.info("%s" % action)
+    ###
+    remove_duplicates(main_d_nucl)
+    remove_duplicates(main_d_nucl)
+    
+    if select_mode == 'cds':
+        remove_duplicates(main_d_prot)
+        remove_duplicates(main_d_prot)
+
+    remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff)
+    remove_orfs(main_d_nucl, main_d_prot)
+    remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode, log)
+    
+    extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir)
+    
+    if not select_mode == 'cds':
+        multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir)
+    
+    if select_mode == 'cds':
+        conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log)
+    
+    successList = convert_fasta_alignment_to_nexus(main_d_nucl, out_dir)
+    concatenate_alignments(successList, out_dir)
+    
     action = "end of script\n"
     log.info("%s" % action)
+    ###
     quit()
-
 
 # ------------------------------------------------------------------------------#
 # ARGPARSE
