@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm_gruenstaeudl@fhsu.edu|Mon 09 Oct 2023 08:18:54 PM CDT'
+__version__ = 'm_gruenstaeudl@fhsu.edu|Thu 26 Oct 2023 11:26:56 PM CDT'
 
 # ------------------------------------------------------------------------------#
 ## IMPORTS
@@ -9,20 +9,18 @@ from Bio import SeqIO, Nexus, SeqRecord, AlignIO  # line is necessary for simila
 from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
 from Bio.SeqFeature import FeatureLocation, CompoundLocation, ExactPosition
 import coloredlogs
-import collections
-import copy
-import io
+from collections import OrderedDict
+from copy import deepcopy
+from io import StringIO
 import logging
 import os
-import re
+from re import sub
 import subprocess
-import sys
 # ------------------------------------------------------------------------------#
 ## DEBUGGING HELP
 import ipdb
-
-
 # ipdb.set_trace()
+
 # -----------------------------------------------------------------#
 # CLASSES AND FUNCTIONS
 
@@ -37,12 +35,12 @@ class ExtractAndCollect:
                 if 'gene' in feature.qualifiers:
                     gene_name = feature.qualifiers['gene'][0]
                     seq_name = gene_name + '_' + rec.name
-                    # Nucleotide sequences
 
                     ## TO DO ##
                     # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line below:
                     # Add function to check if len(sequence) not a multiple of three, as error message for NC_013553.gb suggests
 
+                    # Nucleotide sequences
                     seq_obj = feature.extract(rec).seq
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     if gene_name in self.main_d_nucl.keys():
@@ -89,10 +87,10 @@ class ExtractAndCollect:
             if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
                 cur_feat_name = cur_feat_name
                 cur_feat_name_SAFE = cur_feat_name.replace('-', '_')
-                cur_feat_name_SAFE = re.sub(r'[^\w]', '', cur_feat_name_SAFE)
+                cur_feat_name_SAFE = sub(r'[^\w]', '', cur_feat_name_SAFE)
                 adj_feat_name = adj_feat_name
                 adj_feat_name_SAFE = adj_feat_name.replace('-', '_')
-                adj_feat_name_SAFE = re.sub(r'[^\w]', '', adj_feat_name_SAFE)
+                adj_feat_name_SAFE = sub(r'[^\w]', '', adj_feat_name_SAFE)
                 IGS_name = cur_feat_name_SAFE + '_' + adj_feat_name_SAFE
                 inv_IGS_name = adj_feat_name_SAFE + '_' + cur_feat_name_SAFE
                 # Exclude all genes with compound locations (as it only messes things up)
@@ -144,7 +142,7 @@ class ExtractAndCollect:
                 try:
                     gene_name_base = feature.qualifiers['gene'][0]
                     gene_name_base_SAFE = gene_name_base.replace('-', '_')
-                    gene_name_base_SAFE = re.sub(r'[^\w]', '', gene_name_base_SAFE)
+                    gene_name_base_SAFE = sub(r'[^\w]', '', gene_name_base_SAFE)
                 except:
                     log.warning("Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (
                     feature.location.start, rec.id))
@@ -162,8 +160,7 @@ class ExtractAndCollect:
                         log.warning("An error for `%s` occurred" % (gene_name))
                         pass
                 if len(feature.location.parts) == 3:
-                    copy_feature = copy.deepcopy(
-                        feature)  ## Important b/c feature is overwritten in extract_INT_internal()
+                    copy_feature = deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
                     try:
                         gene_name = gene_name_base_SAFE + "_intron1"
                         seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
@@ -186,7 +183,6 @@ class ExtractAndCollect:
                     except:
                         log.warning("An issue occurred for `%s`" % (gene_name))
                         pass
-
 
 # -----------------------------------------------------------------#
 
@@ -237,7 +233,6 @@ def proteinalign_and_backtranslate(main_d_prot, out_dir, log):
             log.warning(
                 f"Unable to conduct back-translation of `{k}`. Command used: {cmd_prt}. Error message: {e.output.decode('utf-8')}")
 
-
 def mafft_align(input_file, output_file):
     # Perform sequence alignment using MAFFT
     mafft_cline = Applications.MafftCommandline(input=input_file)
@@ -246,9 +241,9 @@ def mafft_align(input_file, output_file):
     with open(output_file, 'w') as hndl:
         hndl.write(stdout)
 
-
 # ------------------------------------------------------------------------------#
-# not being used?
+# TO DO #
+# The function "extract_INT_internal()" is currently not being used and needs to be integrated
 def extract_INT_internal(rec, feature, gene_name, offset, log):
     try:
         feature.location = FeatureLocation(feature.location.parts[offset].end,
@@ -310,14 +305,14 @@ def unpack_input_parameters(args):
     verbose = args.verbose
     return in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose
 
-def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, log):
-    main_d_nucl = collections.OrderedDict()
-    main_d_prot = collections.OrderedDict() if select_mode == 'cds' else None
-    main_d_intron2 = collections.OrderedDict() if select_mode == 'int' else None
-
+def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
     action = "extracting annotations from genome records"
     log.info("%s" % action)
     ###
+    main_d_nucl = OrderedDict()
+    main_d_prot = OrderedDict() if select_mode == 'cds' else None
+    main_d_intron2 = OrderedDict() if select_mode == 'int' else None
+
     files = [f for f in os.listdir(in_dir) if f.endswith(fileext)]
     for f in files:
         log.info('reading file `%s`' % (f))
@@ -326,8 +321,8 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, lo
 
         ## TO DO ##
         # Integrate taxcutoff in ExtractAndCollect(main_d_nucl).do_CDS
-        #						 ExtractAndCollect(main_d_nucl).do_IGS
-        #						 ExtractAndCollect(main_d_nucl).do_INT
+        #                         ExtractAndCollect(main_d_nucl).do_IGS
+        #                         ExtractAndCollect(main_d_nucl).do_INT
 
         ## TO DO ##   
         # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
@@ -346,6 +341,17 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, lo
             raise Exception()
 
     return main_d_nucl, main_d_prot
+
+def removing_duplicate_annotations(main_d_nucl, main_d_prot, select_mode):
+    action = "removing duplicate annotations"
+    log.info("%s" % action)
+    ###
+    remove_duplicates(main_d_nucl)
+    remove_duplicates(main_d_nucl)
+    
+    if select_mode == 'cds':
+        remove_duplicates(main_d_prot)
+        remove_duplicates(main_d_prot)
 
 def remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff):
     action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
@@ -367,7 +373,7 @@ def remove_orfs(main_d_nucl, main_d_prot):
         if main_d_prot:
             del main_d_prot[orf]
 
-def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode, log):
+def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode):
     action = "removing user-defined genes"
     log.info("%s" % action)
     ###
@@ -422,7 +428,7 @@ def multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir):
         log.critical("No items in nucleotide main dictionary to process")
         raise Exception()
 
-def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log):
+def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir):
     action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
     log.info("%s" % action)
     ###
@@ -453,7 +459,7 @@ def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
             # ipdb.set_trace()
 
             alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
-            hndl = io.StringIO()
+            hndl = StringIO()
             AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
             nexus_string = nexus_string.replace('\n' + k + '_', '\nconcatenated_') # IMPORTANT: Stripping the gene name from the sequence name
@@ -464,7 +470,7 @@ def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
             log.warning("Unable to add alignment of `%s` to concatenation" % k)
             # raise Exception()
             pass
-
+    
     return successList
 
 def concatenate_alignments(successList, out_dir):
@@ -493,21 +499,12 @@ def main(args):
     in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose = unpack_input_parameters(args)
     log = setup_logger(verbose)
     
-    main_d_nucl, main_d_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff, log)
-
-    action = "removing duplicate annotations"
-    log.info("%s" % action)
-    ###
-    remove_duplicates(main_d_nucl)
-    remove_duplicates(main_d_nucl)
-    
-    if select_mode == 'cds':
-        remove_duplicates(main_d_prot)
-        remove_duplicates(main_d_prot)
+    main_d_nucl, main_d_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff)
+    removing_duplicate_annotations(main_d_nucl, main_d_prot, select_mode)
 
     remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff)
     remove_orfs(main_d_nucl, main_d_prot)
-    remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode, log)
+    remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode)
     
     extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir)
     
@@ -515,7 +512,7 @@ def main(args):
         multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir)
     
     if select_mode == 'cds':
-        conduct_protein_alignment_and_back_translation(main_d_prot, out_dir, log)
+        conduct_protein_alignment_and_back_translation(main_d_prot, out_dir)
     
     successList = convert_fasta_alignment_to_nexus(main_d_nucl, out_dir)
     concatenate_alignments(successList, out_dir)
