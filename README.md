@@ -9,7 +9,9 @@ apt install mafft
 ```
 ##### Other dependencies
 ```
+pip install biopython
 pip install coloredlogs
+pip install ipbd
 ```
 
 #### Unpacking benchmark dataset
