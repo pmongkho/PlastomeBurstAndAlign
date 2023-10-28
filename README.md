@@ -11,7 +11,7 @@ apt install mafft
 ```
 pip install biopython
 pip install coloredlogs
-pip install ipbd
+pip install ipdb
 ```
 
 #### Unpacking benchmark dataset
