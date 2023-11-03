@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm_gruenstaeudl@fhsu.edu|Thu 26 Oct 2023 11:26:56 PM CDT'
+__version__ = 'm_gruenstaeudl@fhsu.edu|Thu 02 Nov 2023 08:43:26 PM CDT'
 
 # ------------------------------------------------------------------------------#
 ## IMPORTS
@@ -26,10 +26,10 @@ import ipdb
 
 class ExtractAndCollect:
 
-    def __init__(self, main_d_nucl):
-        self.main_d_nucl = main_d_nucl
+    def __init__(self, main_dict_nucl):
+        self.main_dict_nucl = main_dict_nucl
 
-    def do_CDS(self, main_d_prot, rec, len_cutoff, log):
+    def do_CDS(self, main_dict_prot, rec, len_cutoff, log):
         for feature in rec.features:
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
@@ -43,12 +43,12 @@ class ExtractAndCollect:
                     # Nucleotide sequences
                     seq_obj = feature.extract(rec).seq
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    if gene_name in self.main_d_nucl.keys():
-                        tmp = self.main_d_nucl[gene_name]
+                    if gene_name in self.main_dict_nucl.keys():
+                        tmp = self.main_dict_nucl[gene_name]
                         tmp.append(seq_rec)
-                        self.main_d_nucl[gene_name] = tmp
+                        self.main_dict_nucl[gene_name] = tmp
                     else:
-                        self.main_d_nucl[gene_name] = [seq_rec]
+                        self.main_dict_nucl[gene_name] = [seq_rec]
                     # Protein sequences
                     seq_obj = feature.extract(rec).seq.translate(table=11)  # , cds=True)
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
@@ -58,12 +58,12 @@ class ExtractAndCollect:
                     else:
                         continue
                     # Foo bar baz
-                    if gene_name in main_d_prot.keys():
-                        tmp = main_d_prot[gene_name]
+                    if gene_name in main_dict_prot.keys():
+                        tmp = main_dict_prot[gene_name]
                         tmp.append(seq_rec)
-                        main_d_prot[gene_name] = tmp
+                        main_dict_prot[gene_name] = tmp
                     else:
-                        main_d_prot[gene_name] = [seq_rec]
+                        main_dict_prot[gene_name] = [seq_rec]
 
     def do_IGS(self, rec, fname, len_cutoff, log):
         # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
@@ -120,15 +120,15 @@ class ExtractAndCollect:
                     else:
                         continue
                     # ATTACH SEQRECORD TO GROWING DICTIONARY
-                    if IGS_name in self.main_d_nucl.keys() or inv_IGS_name in self.main_d_nucl.keys():
-                        if IGS_name in self.main_d_nucl.keys():
-                            tmp = self.main_d_nucl[IGS_name]
+                    if IGS_name in self.main_dict_nucl.keys() or inv_IGS_name in self.main_dict_nucl.keys():
+                        if IGS_name in self.main_dict_nucl.keys():
+                            tmp = self.main_dict_nucl[IGS_name]
                             tmp.append(seq_rec)
-                            self.main_d_nucl[IGS_name] = tmp
-                        if inv_IGS_name in self.main_d_nucl.keys():
+                            self.main_dict_nucl[IGS_name] = tmp
+                        if inv_IGS_name in self.main_dict_nucl.keys():
                             pass  # Don't count IGS in the IRs twice
                     else:
-                        self.main_d_nucl[IGS_name] = [seq_rec]
+                        self.main_dict_nucl[IGS_name] = [seq_rec]
                 # Handle genes with compound locations
                 else:
                     log.warning(
@@ -136,7 +136,7 @@ class ExtractAndCollect:
                         fname, cur_feat_name, adj_feat_name))
                     continue
 
-    def do_INT(self, main_d_intron2, rec, log):
+    def do_INT(self, main_dict_intron2, rec, log):
         for feature in rec.features:
             if feature.type == 'CDS' or feature.type == 'tRNA':
                 try:
@@ -152,10 +152,10 @@ class ExtractAndCollect:
                     try:
                         gene_name = gene_name_base_SAFE + "_intron1"
                         seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
-                        if gene_name not in self.main_d_nucl.keys():
-                            self.main_d_nucl[gene_name] = [seq_rec]
+                        if gene_name not in self.main_dict_nucl.keys():
+                            self.main_dict_nucl[gene_name] = [seq_rec]
                         else:
-                            self.main_d_nucl[gene_name].append(seq_rec)
+                            self.main_dict_nucl[gene_name].append(seq_rec)
                     except:
                         log.warning("An error for `%s` occurred" % (gene_name))
                         pass
@@ -164,10 +164,10 @@ class ExtractAndCollect:
                     try:
                         gene_name = gene_name_base_SAFE + "_intron1"
                         seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
-                        if gene_name not in self.main_d_nucl.keys():
-                            self.main_d_nucl[gene_name] = [seq_rec]
+                        if gene_name not in self.main_dict_nucl.keys():
+                            self.main_dict_nucl[gene_name] = [seq_rec]
                         else:
-                            self.main_d_nucl[gene_name].append(seq_rec)
+                            self.main_dict_nucl[gene_name].append(seq_rec)
                     except:
                         log.critical("An error occurred for `%s`" % (gene_name))
                         raise Exception()
@@ -176,68 +176,26 @@ class ExtractAndCollect:
                     try:
                         gene_name = gene_name_base_SAFE + "_intron2"
                         seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 1, log)
-                        if gene_name not in main_d_intron2.keys():
-                            main_d_intron2[gene_name] = [seq_rec]
+                        if gene_name not in main_dict_intron2.keys():
+                            main_dict_intron2[gene_name] = [seq_rec]
                         else:
-                            main_d_intron2[gene_name].append(seq_rec)
+                            main_dict_intron2[gene_name].append(seq_rec)
                     except:
                         log.warning("An issue occurred for `%s`" % (gene_name))
                         pass
 
 # -----------------------------------------------------------------#
 
-def proteinalign_and_backtranslate(main_d_prot, out_dir, log):
-    # Step 1. Write unaligned protein sequences to file
-    for k, v in main_d_prot.items():
-        out_fn_unalign_prot = os.path.join(out_dir, f'prot_{k}.unalign.fasta')
-        out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta')
-
-        with open(out_fn_unalign_prot, 'w') as hndl:
-            SeqIO.write(v, hndl, 'fasta')
-
-        # Step 2. Align sequences with MAFFT
-        # import subprocess
-        # subprocess.call(['mafft', '--auto', out_fn_unalign_prot, '>', out_fn_aligned_prot])
-        mafft_align(out_fn_unalign_prot, out_fn_aligned_prot)
-
-    # Step 4. Check if back-translation script exists
-    path_to_back_transl_helper = os.path.join(os.path.dirname(__file__), 'align_back_trans.py')
-    if not os.path.isfile(path_to_back_transl_helper):
-        log.critical("Unable to find `align_back_trans.py` alongside this script")
-        raise Exception()
-
-    # Step 5. Conduct actual back-translation
-    for k, v in main_d_prot.items():
-        out_fn_unalign_nucl = os.path.join(out_dir, f'nucl_{k}.unalign.fasta')
-        out_fn_aligned_nucl = os.path.join(out_dir, f'nucl_{k}.aligned.fasta')
-        out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta')
-
-        ## TO DO - BUG! ##
-        # For some reason, the path_to_back_transl_helper spits out only nexus files
-        cmd = ['python3', path_to_back_transl_helper, 'fasta', out_fn_aligned_prot, out_fn_unalign_nucl,
-               out_fn_aligned_nucl, '11']
-
-        try:
-            ## TO DO - BUG! ##
-            # For some reason, stderr is not properly saved to log_msg in cases when the back-translation python package does not work; then log_msg is empty
-
-            log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            cmd_prt = ' '.join(cmd)
-            ## TO DO - BUG! ##
-            # The following lines do not work because log_msg is empty, as indicated above.
-
-            # log_prt = str(log_msg, 'utf-8')
-            # log.warning("Unable to conduct back-translation of `%s`. Command used: %s. Error message: %s" % (k, cmd_prt, log_prt))
-
-            log.warning(
-                f"Unable to conduct back-translation of `{k}`. Command used: {cmd_prt}. Error message: {e.output.decode('utf-8')}")
-
-def mafft_align(input_file, output_file):
+def mafft_align(input_file, output_file, num_threads):
+    # LEGACY WAY:
+    # import subprocess
+    # subprocess.call(['mafft', '--auto', out_fn_unalign_prot, '>', out_fn_aligned_prot])
+    # CURRENT WAY:
     # Perform sequence alignment using MAFFT
-    mafft_cline = Applications.MafftCommandline(input=input_file)
+    mafft_cline = Applications.MafftCommandline(input=input_file,
+                                                adjustdirection=True,
+                                                thread=num_threads)
     stdout, stderr = mafft_cline()
-
     with open(output_file, 'w') as hndl:
         hndl.write(stdout)
 
@@ -254,7 +212,7 @@ def extract_INT_internal(rec, feature, gene_name, offset, log):
     try:
         seq_name = gene_name + '_' + rec.name
         seq_obj = feature.extract(rec).seq  # Here the actual extraction is conducted
-        seq_rec = Bio.SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+        seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
         return (seq_rec, gene_name)
     except:
         log.critical("Unable to conduct intron extraction for %s" % feature.qualifiers['gene'])
@@ -309,9 +267,9 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
     action = "extracting annotations from genome records"
     log.info("%s" % action)
     ###
-    main_d_nucl = OrderedDict()
-    main_d_prot = OrderedDict() if select_mode == 'cds' else None
-    main_d_intron2 = OrderedDict() if select_mode == 'int' else None
+    main_dict_nucl = OrderedDict()
+    main_dict_prot = OrderedDict() if select_mode == 'cds' else None
+    main_dict_intron2 = OrderedDict() if select_mode == 'int' else None
 
     files = [f for f in os.listdir(in_dir) if f.endswith(fileext)]
     for f in files:
@@ -320,60 +278,60 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
         rec = SeqIO.read(os.path.join(in_dir, f), 'genbank')
 
         ## TO DO ##
-        # Integrate taxcutoff in ExtractAndCollect(main_d_nucl).do_CDS
-        #                         ExtractAndCollect(main_d_nucl).do_IGS
-        #                         ExtractAndCollect(main_d_nucl).do_INT
+        # Integrate taxcutoff in ExtractAndCollect(main_dict_nucl).do_CDS
+        #                         ExtractAndCollect(main_dict_nucl).do_IGS
+        #                         ExtractAndCollect(main_dict_nucl).do_INT
 
         ## TO DO ##   
         # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
         # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
             
         if select_mode == 'cds':
-            ExtractAndCollect(main_d_nucl).do_CDS(main_d_prot, rec, len_cutoff, log)
+            ExtractAndCollect(main_dict_nucl).do_CDS(main_dict_prot, rec, len_cutoff, log)
         if select_mode == 'igs':
-            ExtractAndCollect(main_d_nucl).do_IGS(rec, f, len_cutoff, log)
+            ExtractAndCollect(main_dict_nucl).do_IGS(rec, f, len_cutoff, log)
         if select_mode == 'int':
-            ExtractAndCollect(main_d_nucl).do_INT(main_d_intron2, rec, log)
-            main_d_nucl.update(main_d_intron2)
+            ExtractAndCollect(main_dict_nucl).do_INT(main_dict_intron2, rec, log)
+            main_dict_nucl.update(main_dict_intron2)
 
-        if not main_d_nucl.items():
+        if not main_dict_nucl.items():
             log.critical("No items in main dictionary: %s" % out_dir)
             raise Exception()
 
-    return main_d_nucl, main_d_prot
+    return main_dict_nucl, main_dict_prot
 
-def removing_duplicate_annotations(main_d_nucl, main_d_prot, select_mode):
+def removing_duplicate_annotations(main_dict_nucl, main_dict_prot, select_mode):
     action = "removing duplicate annotations"
     log.info("%s" % action)
     ###
-    remove_duplicates(main_d_nucl)
-    remove_duplicates(main_d_nucl)
+    remove_duplicates(main_dict_nucl)
+    remove_duplicates(main_dict_nucl)
     
     if select_mode == 'cds':
-        remove_duplicates(main_d_prot)
-        remove_duplicates(main_d_prot)
+        remove_duplicates(main_dict_prot)
+        remove_duplicates(main_dict_prot)
 
-def remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff):
+def remove_annotations_below_taxa_cutoff(main_dict_nucl, main_dict_prot, tax_cutoff):
     action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
     log.info("%s" % action)
     ###
-    for k, v in main_d_nucl.items():
+    for k, v in main_dict_nucl.items():
         if len(v) < tax_cutoff:
-            del main_d_nucl[k]
-            if main_d_prot:
-                del main_d_prot[k]
+            del main_dict_nucl[k]
+            if main_dict_prot:
+                del main_dict_prot[k]
 
-def remove_orfs(main_d_nucl, main_d_prot):
+def remove_orfs(main_dict_nucl, main_dict_prot):
     action = "removing ORFs"
     log.info("%s" % action)
     ###
-    list_of_orfs = [orf for orf in main_d_nucl.keys() if "orf" in orf]
+    list_of_orfs = [orf for orf in main_dict_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
-        del main_d_nucl[orf]
-        if main_d_prot:
-            del main_d_prot[orf]
+        del main_dict_nucl[orf]
+        if main_dict_prot:
+            del main_dict_prot[orf]
 
-def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode):
+def remove_user_defined_genes(main_dict_nucl, main_dict_prot, exclude_list, select_mode):
     action = "removing user-defined genes"
     log.info("%s" % action)
     ###
@@ -382,115 +340,161 @@ def remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mod
             to_be_excluded = [i + "_intron1" for i in exclude_list] + [i + "_intron2" for i in exclude_list]
             exclude_list = to_be_excluded
         for excluded in exclude_list:
-            if excluded in main_d_nucl:
-                del main_d_nucl[excluded]
-                if select_mode == 'cds' and main_d_prot:
-                    del main_d_prot[excluded]
+            if excluded in main_dict_nucl:
+                del main_dict_nucl[excluded]
+                if select_mode == 'cds' and main_dict_prot:
+                    del main_dict_prot[excluded]
             else:
                 log.warning("Region `%s` to be excluded but unable to be found in infile." % excluded)
                 pass
 
-def extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir):
-    action = "extracting and combining nucleotide sequences genewise"
+def save_regions_as_unaligned_matrices(main_dict_nucl, out_dir):
+    '''
+    Takes a dictionary of nucleotide sequences and saves all sequences of the same region into an unaligned nucleotide matrix
+    Input: dictionary of sorted nucleotide sequences of all regions
+    Output: unaligned nucleotide matrix for each region, saved to file
+    '''
+    action = "saving individual regions as unaligned nucleotide matrices"
     log.info("%s" % action)
     ###
-    for k, v in main_d_nucl.items():
+    for k, v in main_dict_nucl.items():
         out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
         with open(out_fn_unalign_nucl, 'w') as hndl:
             SeqIO.write(v, hndl, 'fasta')
 
-def multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir):
+def multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir):
+    '''
+    Iterates over all unaligned nucleotide matrices and aligns each via a third-party software tool
+    Input:  - dictionary of sorted nucleotide sequences of all regions (used only for region names!)
+            - unaligned nucleotide matrices (present as files in FASTA format)
+    Output: aligned nucleotide matrices (present as files in FASTA format)
+    '''
     action = "conducting multiple sequence alignment based on nucleotide sequence data"
     log.info("%s" % action)
     ###
-    if main_d_nucl.items():
-        for k, v in main_d_nucl.items():
+    if main_dict_nucl.items():
+        for k in main_dict_nucl.keys():
+        #for k, v in main_dict_nucl.items():  # does not utilize 'v' but only 'k' ## LIne to be deleted if above one works fine!
             out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
             out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
 
-            # import subprocess
-            # subprocess.call(['mafft', '--auto', out_fn_unalign_nucl, '>', out_fn_aligned_nucl])
-
+        # Step 1. Determine number of CPU core available
             ## TO DO ##
             # Automatically determine number of threads available #
             # Have the number of threads saved as num_threads
-            
             num_threads = 1
-
+        # Step 2. Align matrices based on their NUCLEOTIDE sequences via third-party alignment tool
             ## TO DO ##
             # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.; use a new argparse argument and if statements in the ine below
-            
-            alignm_cmdlexec = Applications.MafftCommandline(input=out_fn_unalign_nucl, adjustdirection=True, thread=num_threads)
-            stdout, stderr = alignm_cmdlexec()
-            with open(out_fn_aligned_nucl, 'w') as hndl:
-                hndl.write(stdout)
+            mafft_align(out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
     else:
         log.critical("No items in nucleotide main dictionary to process")
         raise Exception()
 
-def conduct_protein_alignment_and_back_translation(main_d_prot, out_dir):
+def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
+    '''
+    Iterates over all unaligned PROTEIN matrices, aligns them as proteins via third-party software, and back-translates each alignment to NUCLEOTIDES
+    Input:  dictionary of sorted PROTEIN sequences of all regions
+    Output: aligned nucleotide matrices (present as files in NEXUS format)
+    '''
     action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
     log.info("%s" % action)
     ###
     try:
-        proteinalign_and_backtranslate(main_d_prot, out_dir, log)
+        for k, v in main_dict_prot.items():
+            out_fn_unalign_prot = os.path.join(out_dir, f'prot_{k}.unalign.fasta')
+            out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta')
+            # Step 1. Write unaligned protein sequences to file
+            with open(out_fn_unalign_prot, 'w') as hndl:
+                SeqIO.write(v, hndl, 'fasta')
+
+            # Step X. Determine number of CPU core available
+            ## TO DO ##
+            # Automatically determine number of threads available #
+            # Have the number of threads saved as num_threads
+            num_threads = 1
+
+            # Step 2. Align matrices based on their PROTEIN sequences via third-party alignment tool
+            mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
+
+        # Step 3. Check if back-translation script exists
+        path_to_back_transl_helper = os.path.join(os.path.dirname(__file__), 'align_back_trans.py')
+        if not os.path.isfile(path_to_back_transl_helper):
+            log.critical("Unable to find `align_back_trans.py` alongside this script")
+            raise Exception()
+
+        # Step 4. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
+        for k, v in main_dict_prot.items():
+            out_fn_unalign_nucl = os.path.join(out_dir, f'nucl_{k}.unalign.fasta') # we have at this point
+            out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta') # we have at this point
+            out_fn_aligned_nucl = os.path.join(out_dir, f'nucl_{k}.aligned.fasta') # we want
+
+            ## TO DO - BUG! ##
+            # For some reason, the path_to_back_transl_helper spits out only NEXUS files
+            cmd = ['python3', path_to_back_transl_helper, 'fasta', out_fn_aligned_prot, out_fn_unalign_nucl,
+                   out_fn_aligned_nucl, '11']
+            try:
+                log_msg = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                cmd_prt = ' '.join(cmd)
+                log.warning(
+                    f"Unable to conduct back-translation of `{k}`. "
+                    f"Command used: {cmd_prt}. "
+                    f"Error message received: {e.output.decode('utf-8').strip()}.")
     except:
         raise Exception()
 
-def convert_fasta_alignment_to_nexus(main_d_nucl, out_dir):
-    action = "converting FASTA alignment to NEXUS alignment"
+def collect_successful_alignments(main_dict_nucl, out_dir):
+    '''
+    Convert to alignments to NEXUS format (where necessary); then collect all successfully generated alignments
+    Input:  dictionary of region names
+    Output: list of alignments
+    '''
+    action = "collecting all successful alignments"
     log.info("%s" % action)
     ###
-    successList = []
-
-    for k in main_d_nucl.keys():
+    success_list = []
+    for k in main_dict_nucl.keys():
+        # Step 1. Define input and output names
         aligned_nucl_fasta = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
         aligned_nucl_nexus = os.path.join(out_dir, 'nucl_' + k + '.aligned.nexus')
-        # Convert FASTA alignment to NEXUS alignment
+        # Step 2. Convert FASTA alignment to NEXUS alignment
         try:
             AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
             log.warning("Unable to convert alignment of `%s` from FASTA to NEXUS" % k)
-            # raise Exception()
-
-            continue  # skip to next k in loop, so that k is not included in successList
-        # Import NEXUS and append to list for concatenation
+            continue  # skip to next k in loop, so that k is not included in success_list
+        # Step 3. Import NEXUS files and append to list for concatenation
         try:
-            # ipdb.set_trace()
-
             alignm_nexus = AlignIO.read(aligned_nucl_nexus, 'nexus')
             hndl = StringIO()
             AlignIO.write(alignm_nexus, hndl, 'nexus')
             nexus_string = hndl.getvalue()
-            nexus_string = nexus_string.replace('\n' + k + '_', '\nconcatenated_') # IMPORTANT: Stripping the gene name from the sequence name
-            ###
+            nexus_string = nexus_string.replace('\n' + k + '_', '\nconcat_') # IMPORTANT: Stripping the gene name from the sequence name
             alignm_nexus = Nexus.Nexus.Nexus(nexus_string)
-            successList.append((k, alignm_nexus))  # Function 'Nexus.Nexus.combine' needs a tuple.
+            success_list.append((k, alignm_nexus))  # Function 'Nexus.Nexus.combine' needs a tuple.
         except:
             log.warning("Unable to add alignment of `%s` to concatenation" % k)
-            # raise Exception()
             pass
-    
-    return successList
+    return success_list
 
-def concatenate_alignments(successList, out_dir):
-    action = "concatenate alignments (in no particular order)"
+def concatenate_successful_alignments(success_list, out_dir):
+    action = "concatenate all successful alignments (in no particular order)"
     log.info("%s" % action)
     ###
-    # Define output names
-    out_fn_nucl_concatenated_fasta = os.path.join(out_dir, 'nucl_' + str(len(successList)) + 'concatenated.aligned.fasta')
-    out_fn_nucl_concatenated_nexus = os.path.join(out_dir, 'nucl_' + str(len(successList)) + 'concatenated.aligned.nexus')
-    # Do concatenation
+    # Step 1. Define output names
+    out_fn_nucl_concat_fasta = os.path.join(out_dir, 'nucl_' + str(len(success_list)) + 'concat.aligned.fasta')
+    out_fn_nucl_concat_nexus = os.path.join(out_dir, 'nucl_' + str(len(success_list)) + 'concat.aligned.nexus')
+    # Step 2. Do concatenation
     try:
-        alignm_concatenated = Nexus.Nexus.combine(successList)  # Function 'Nexus.Nexus.combine' needs a tuple.
+        alignm_concat = Nexus.Nexus.combine(success_list)  # Function 'Nexus.Nexus.combine' needs a tuple.
     except:
         log.critical("Unable to concatenate alignments")
         raise Exception()
-
-    # Write concatenated alignment to file in NEXUS format
-    alignm_concatenated.write_nexus_data(filename=open(out_fn_nucl_concatenated_nexus, 'w'))
-    # Convert concatenated alignment in NEXUS format to FASTA format
-    AlignIO.convert(out_fn_nucl_concatenated_nexus, 'nexus', out_fn_nucl_concatenated_fasta, 'fasta')
+    # Step 3. Write concatenated alignments to file in NEXUS format
+    alignm_concat.write_nexus_data(filename=open(out_fn_nucl_concat_nexus, 'w'))
+    # Step 4. Convert the NEXUS file just generated to FASTA format
+    AlignIO.convert(out_fn_nucl_concat_nexus, 'nexus', out_fn_nucl_concat_fasta, 'fasta')
 
 # ------------------------------------------------------------------------------#
 ## MAIN
@@ -499,23 +503,23 @@ def main(args):
     in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose = unpack_input_parameters(args)
     log = setup_logger(verbose)
     
-    main_d_nucl, main_d_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff)
-    removing_duplicate_annotations(main_d_nucl, main_d_prot, select_mode)
+    main_dict_nucl, main_dict_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff)
+    removing_duplicate_annotations(main_dict_nucl, main_dict_prot, select_mode)
 
-    remove_annotations_below_taxa_cutoff(main_d_nucl, main_d_prot, tax_cutoff)
-    remove_orfs(main_d_nucl, main_d_prot)
-    remove_user_defined_genes(main_d_nucl, main_d_prot, exclude_list, select_mode)
+    remove_annotations_below_taxa_cutoff(main_dict_nucl, main_dict_prot, tax_cutoff)
+    remove_orfs(main_dict_nucl, main_dict_prot)
+    remove_user_defined_genes(main_dict_nucl, main_dict_prot, exclude_list, select_mode)
     
-    extract_and_combine_nucleotide_sequences(main_d_nucl, out_dir)
+    save_regions_as_unaligned_matrices(main_dict_nucl, out_dir)
     
     if not select_mode == 'cds':
-        multiple_sequence_alignment_nucleotide(main_d_nucl, out_dir)
+        multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir)
     
     if select_mode == 'cds':
-        conduct_protein_alignment_and_back_translation(main_d_prot, out_dir)
+        conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir)
     
-    successList = convert_fasta_alignment_to_nexus(main_d_nucl, out_dir)
-    concatenate_alignments(successList, out_dir)
+    success_list = collect_successful_alignments(main_dict_nucl, out_dir)
+    concatenate_successful_alignments(success_list, out_dir)
     
     action = "end of script\n"
     log.info("%s" % action)
