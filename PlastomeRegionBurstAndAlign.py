@@ -358,6 +358,7 @@ def save_regions_as_unaligned_matrices(main_dict_nucl, out_dir):
     log.info("%s" % action)
     ###
     for k, v in main_dict_nucl.items():
+        # Define input and output names
         out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
         with open(out_fn_unalign_nucl, 'w') as hndl:
             SeqIO.write(v, hndl, 'fasta')
@@ -374,7 +375,7 @@ def multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir):
     ###
     if main_dict_nucl.items():
         for k in main_dict_nucl.keys():
-        #for k, v in main_dict_nucl.items():  # does not utilize 'v' but only 'k' ## LIne to be deleted if above one works fine!
+            # Define input and output names
             out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
             out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
 
@@ -402,6 +403,7 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
     ###
     try:
         for k, v in main_dict_prot.items():
+            # Define input and output names
             out_fn_unalign_prot = os.path.join(out_dir, f'prot_{k}.unalign.fasta')
             out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta')
             # Step 1. Write unaligned protein sequences to file
@@ -425,12 +427,13 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
 
         # Step 4. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
         for k, v in main_dict_prot.items():
+            # Define input and output names
             out_fn_unalign_nucl = os.path.join(out_dir, f'nucl_{k}.unalign.fasta') # we have at this point
             out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta') # we have at this point
             out_fn_aligned_nucl = os.path.join(out_dir, f'nucl_{k}.aligned.fasta') # we want
 
             ## TO DO - BUG! ##
-            # For some reason, the path_to_back_transl_helper spits out only NEXUS files
+            # For some reason, the path_to_back_transl_helper spits only works if FASTA files are specified, not if NEXUS files are specified
             cmd = ['python3', path_to_back_transl_helper, 'fasta', out_fn_aligned_prot, out_fn_unalign_nucl,
                    out_fn_aligned_nucl, '11']
             try:
@@ -446,7 +449,7 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
 
 def collect_successful_alignments(main_dict_nucl, out_dir):
     '''
-    Convert to alignments to NEXUS format (where necessary); then collect all successfully generated alignments
+    Convert alignments to NEXUS format; then collect all successfully generated alignments
     Input:  dictionary of region names
     Output: list of alignments
     '''
@@ -514,10 +517,10 @@ def main(args):
     
     if not select_mode == 'cds':
         multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir)
-    
+
     if select_mode == 'cds':
         conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir)
-    
+
     success_list = collect_successful_alignments(main_dict_nucl, out_dir)
     concatenate_successful_alignments(success_list, out_dir)
     
