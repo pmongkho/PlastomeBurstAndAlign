@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''Extract and align coding and non-coding regions across multiple plastid genomes'''
-__version__ = 'm_gruenstaeudl@fhsu.edu|Thu 02 Nov 2023 08:43:26 PM CDT'
+__version__ = 'm_gruenstaeudl@fhsu.edu|Sun 05 Nov 2023 08:32:46 PM CDT'
 
 # ------------------------------------------------------------------------------#
 ## IMPORTS
@@ -504,6 +504,9 @@ def concatenate_successful_alignments(success_list, out_dir):
 def main(args):
     in_dir, out_dir, fileext, exclude_list, min_seq_length, min_num_taxa, select_mode, verbose = unpack_input_parameters(args)
     log = setup_logger(verbose)
+    
+    # TO DO
+    # Include function here that tests if the third-party script mafft is even available on the system
     
     main_dict_nucl, main_dict_prot = parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length)
     remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode)
