@@ -29,18 +29,14 @@ class ExtractAndCollect:
     def __init__(self, main_dict_nucl):
         self.main_dict_nucl = main_dict_nucl
 
-    def do_CDS(self, main_dict_prot, rec, min_seq_length, log):
+    def do_CDS(self, main_dict_prot, rec, min_seq_length):
         for feature in rec.features:
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
                     gene_name = feature.qualifiers['gene'][0]
                     seq_name = gene_name + '_' + rec.name
 
-                    ## TO DO ##
-                    # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line below:
-                    # Add function to check if len(sequence) not a multiple of three, as error message for NC_013553.gb suggests
-
-                    # Nucleotide sequences
+                    # Step 1. Extract nucleotide sequence of each gene
                     seq_obj = feature.extract(rec).seq
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     if gene_name in self.main_dict_nucl.keys():
@@ -49,15 +45,18 @@ class ExtractAndCollect:
                         self.main_dict_nucl[gene_name] = tmp
                     else:
                         self.main_dict_nucl[gene_name] = [seq_rec]
-                    # Protein sequences
+
+                    # Step 2. Translate nucleotide sequence to amino acid sequence
                     seq_obj = feature.extract(rec).seq.translate(table=11)  # , cds=True)
-                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    # Testing for minimum sequence length
+
+                    # Step 3. Test for minimum sequence length
                     if len(seq_obj) >= min_seq_length:
                         pass
                     else:
                         continue
-                    # Foo bar baz
+
+                    # Step 4. Save protein sequence to output dictionary
+                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
                     if gene_name in main_dict_prot.keys():
                         tmp = main_dict_prot[gene_name]
                         tmp.append(seq_rec)
@@ -65,8 +64,9 @@ class ExtractAndCollect:
                     else:
                         main_dict_prot[gene_name] = [seq_rec]
 
-    def do_IGS(self, rec, fname, min_seq_length, log):
-        # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
+    def do_IGS(self, rec, fname, min_seq_length):
+
+        # Step 1. Extract all genes from record (i.e., cds, trna, rrna)
         # Resulting list contains adjacent features in order of appearance on genome
         # Note: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
         all_genes = [feature for feature in rec.features if (
@@ -77,13 +77,15 @@ class ExtractAndCollect:
         ## TO DO ##
         # Isn't there a better way to handle matK?!
         all_genes_minus_matK = [feature for feature in all_genes if feature.qualifiers['gene'][0] != 'matK']
-        # LOOP THROUGH GENES
+
+        # Step 2. Loop through genes
         for count, idx in enumerate(range(0, len(all_genes_minus_matK) - 1), 1):
             cur_feat = all_genes_minus_matK[idx]
             cur_feat_name = cur_feat.qualifiers['gene'][0]
             adj_feat = all_genes_minus_matK[idx + 1]
             adj_feat_name = adj_feat.qualifiers['gene'][0]
-            # Define names of IGS
+
+            # Step 3. Define names of IGS
             if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
                 cur_feat_name = cur_feat_name
                 cur_feat_name_SAFE = cur_feat_name.replace('-', '_')
@@ -93,10 +95,11 @@ class ExtractAndCollect:
                 adj_feat_name_SAFE = sub(r'[^\w]', '', adj_feat_name_SAFE)
                 IGS_name = cur_feat_name_SAFE + '_' + adj_feat_name_SAFE
                 inv_IGS_name = adj_feat_name_SAFE + '_' + cur_feat_name_SAFE
-                # Exclude all genes with compound locations (as it only messes things up)
+
+                # Only operate on genes that do not have compound locations (as it only messes things up)
                 if type(cur_feat.location) is not CompoundLocation and \
                         type(adj_feat.location) is not CompoundLocation:
-                    # Make IGS SeqFeature
+                    # Step 4. Make IGS SeqFeature
                     start_pos = ExactPosition(cur_feat.location.end)  # +1)  Note: It's unclear if a +1 is needed here.
                     end_pos = ExactPosition(adj_feat.location.start)
                     if int(start_pos) >= int(end_pos):
@@ -109,16 +112,16 @@ class ExtractAndCollect:
                                 '\t%s: Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ). Skipping this IGS ...' % (
                                 fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
                             continue
-                    # Make IGS SeqRecord
+                    # Step 5. Make IGS SeqRecord
                     seq_obj = exact_location.extract(rec).seq
                     seq_name = IGS_name + '_' + rec.name
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    # Testing for minimum sequence length
+                    # Step 6. Testing for minimum sequence length
                     if len(seq_obj) >= min_seq_length:
                         pass
                     else:
                         continue
-                    # ATTACH SEQRECORD TO GROWING DICTIONARY
+                    # Step 7. Attach seqrecord to growing dictionary
                     if IGS_name in self.main_dict_nucl.keys() or inv_IGS_name in self.main_dict_nucl.keys():
                         if IGS_name in self.main_dict_nucl.keys():
                             tmp = self.main_dict_nucl[IGS_name]
@@ -135,7 +138,7 @@ class ExtractAndCollect:
                         fname, cur_feat_name, adj_feat_name))
                     continue
 
-    def do_INT(self, main_dict_intron2, rec, log):
+    def do_INT(self, main_dict_intron2, rec):
         for feature in rec.features:
             if feature.type == 'CDS' or feature.type == 'tRNA':
                 try:
@@ -146,11 +149,12 @@ class ExtractAndCollect:
                     log.warning("Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (
                     feature.location.start, rec.id))
                     continue
-                # Limiting the search to CDS containing introns
+                # Step 1. Limiting the search to CDS containing introns
+                # Step 1.a. If one intron in gene:
                 if len(feature.location.parts) == 2:
                     try:
                         gene_name = gene_name_base_SAFE + "_intron1"
-                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0)
                         if gene_name not in self.main_dict_nucl.keys():
                             self.main_dict_nucl[gene_name] = [seq_rec]
                         else:
@@ -158,11 +162,12 @@ class ExtractAndCollect:
                     except:
                         log.warning("An error for `%s` occurred" % (gene_name))
                         pass
+                # Step 1.b. If two introns in gene:
                 if len(feature.location.parts) == 3:
                     copy_feature = deepcopy(feature)  ## Important b/c feature is overwritten in extract_INT_internal()
                     try:
                         gene_name = gene_name_base_SAFE + "_intron1"
-                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0, log)
+                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 0)
                         if gene_name not in self.main_dict_nucl.keys():
                             self.main_dict_nucl[gene_name] = [seq_rec]
                         else:
@@ -174,7 +179,7 @@ class ExtractAndCollect:
                     feature = copy_feature
                     try:
                         gene_name = gene_name_base_SAFE + "_intron2"
-                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 1, log)
+                        seq_rec, gene_name = extract_INT_internal(rec, feature, gene_name, 1)
                         if gene_name not in main_dict_intron2.keys():
                             main_dict_intron2[gene_name] = [seq_rec]
                         else:
@@ -201,7 +206,7 @@ def mafft_align(input_file, output_file, num_threads):
 # ------------------------------------------------------------------------------#
 # TO DO #
 # The function "extract_INT_internal()" is currently not being used and needs to be integrated
-def extract_INT_internal(rec, feature, gene_name, offset, log):
+def extract_INT_internal(rec, feature, gene_name, offset):
     try:
         feature.location = FeatureLocation(feature.location.parts[offset].end,
                                                           feature.location.parts[offset + 1].start)
@@ -286,11 +291,11 @@ def parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length
         # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
             
         if select_mode == 'cds':
-            ExtractAndCollect(main_dict_nucl).do_CDS(main_dict_prot, rec, min_seq_length, log)
+            ExtractAndCollect(main_dict_nucl).do_CDS(main_dict_prot, rec, min_seq_length)
         if select_mode == 'igs':
-            ExtractAndCollect(main_dict_nucl).do_IGS(rec, f, min_seq_length, log)
+            ExtractAndCollect(main_dict_nucl).do_IGS(rec, f, min_seq_length)
         if select_mode == 'int':
-            ExtractAndCollect(main_dict_nucl).do_INT(main_dict_intron2, rec, log)
+            ExtractAndCollect(main_dict_nucl).do_INT(main_dict_intron2, rec)
             main_dict_nucl.update(main_dict_intron2)
 
         if not main_dict_nucl.items():
@@ -431,8 +436,7 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
             out_fn_aligned_prot = os.path.join(out_dir, f'prot_{k}.aligned.fasta') # we have at this point
             out_fn_aligned_nucl = os.path.join(out_dir, f'nucl_{k}.aligned.fasta') # we want
 
-            ## TO DO - BUG! ##
-            # For some reason, the path_to_back_transl_helper spits only works if FASTA files are specified, not if NEXUS files are specified
+            # Note: For some reason, the path_to_back_transl_helper spits only works if FASTA files are specified, not if NEXUS files are specified
             cmd = ['python3', path_to_back_transl_helper, 'fasta', out_fn_aligned_prot, out_fn_unalign_nucl,
                    out_fn_aligned_nucl, '11']
             try:
