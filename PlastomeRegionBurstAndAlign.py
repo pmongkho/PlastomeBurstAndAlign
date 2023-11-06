@@ -29,7 +29,7 @@ class ExtractAndCollect:
     def __init__(self, main_dict_nucl):
         self.main_dict_nucl = main_dict_nucl
 
-    def do_CDS(self, main_dict_prot, rec, len_cutoff, log):
+    def do_CDS(self, main_dict_prot, rec, min_seq_length, log):
         for feature in rec.features:
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
@@ -52,8 +52,8 @@ class ExtractAndCollect:
                     # Protein sequences
                     seq_obj = feature.extract(rec).seq.translate(table=11)  # , cds=True)
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    # Length cutoff value
-                    if len(seq_obj) >= len_cutoff:
+                    # Testing for minimum sequence length
+                    if len(seq_obj) >= min_seq_length:
                         pass
                     else:
                         continue
@@ -65,7 +65,7 @@ class ExtractAndCollect:
                     else:
                         main_dict_prot[gene_name] = [seq_rec]
 
-    def do_IGS(self, rec, fname, len_cutoff, log):
+    def do_IGS(self, rec, fname, min_seq_length, log):
         # EXTRACT ALL GENES FROM RECORD (I.E., CDS, TRNA, RRNA)
         # Resulting list contains adjacent features in order of appearance on genome
         # Note: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
@@ -97,8 +97,7 @@ class ExtractAndCollect:
                 if type(cur_feat.location) is not CompoundLocation and \
                         type(adj_feat.location) is not CompoundLocation:
                     # Make IGS SeqFeature
-                    start_pos = ExactPosition(
-                        cur_feat.location.end)  # +1)  Note: It's unclear if a +1 is needed here.
+                    start_pos = ExactPosition(cur_feat.location.end)  # +1)  Note: It's unclear if a +1 is needed here.
                     end_pos = ExactPosition(adj_feat.location.start)
                     if int(start_pos) >= int(end_pos):
                         continue  # If there is no IGS, then simply skip this gene pair
@@ -114,8 +113,8 @@ class ExtractAndCollect:
                     seq_obj = exact_location.extract(rec).seq
                     seq_name = IGS_name + '_' + rec.name
                     seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    # Length cutoff value
-                    if len(seq_obj) >= len_cutoff:
+                    # Testing for minimum sequence length
+                    if len(seq_obj) >= min_seq_length:
                         pass
                     else:
                         continue
@@ -257,14 +256,19 @@ def unpack_input_parameters(args):
     
     fileext = args.fileext
     exclude_list = args.excllist
-    len_cutoff = args.lencutoff
-    tax_cutoff = args.taxcutoff
+    min_seq_length = args.minseqlength
+    min_num_taxa = args.minnumtaxa
     select_mode = args.selectmode.lower()
     verbose = args.verbose
-    return in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose
+    return in_dir, out_dir, fileext, exclude_list, min_seq_length, min_num_taxa, select_mode, verbose
 
-def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
-    action = "extracting annotations from genome records"
+def parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length):
+    '''
+    Loads all genome records of a given folder one by one, parses each, and extracts all annotations in accordance with the user input
+    Input:  file location, user specification on cds/int/igs to extract, min_seq_length
+    Output: nucleotide and protein dictionaries
+    '''
+    action = "parse genome records and extract their annotations"
     log.info("%s" % action)
     ###
     main_dict_nucl = OrderedDict()
@@ -277,19 +281,14 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
         ###
         rec = SeqIO.read(os.path.join(in_dir, f), 'genbank')
 
-        ## TO DO ##
-        # Integrate taxcutoff in ExtractAndCollect(main_dict_nucl).do_CDS
-        #                         ExtractAndCollect(main_dict_nucl).do_IGS
-        #                         ExtractAndCollect(main_dict_nucl).do_INT
-
         ## TO DO ##   
         # If warning 'BiopythonWarning: Partial codon, len(sequence) not a multiple of three.' occurs in line above:
         # Is there a way to suppress the warning in line above but activate a flag which would allow us to solve it in individual function
             
         if select_mode == 'cds':
-            ExtractAndCollect(main_dict_nucl).do_CDS(main_dict_prot, rec, len_cutoff, log)
+            ExtractAndCollect(main_dict_nucl).do_CDS(main_dict_prot, rec, min_seq_length, log)
         if select_mode == 'igs':
-            ExtractAndCollect(main_dict_nucl).do_IGS(rec, f, len_cutoff, log)
+            ExtractAndCollect(main_dict_nucl).do_IGS(rec, f, min_seq_length, log)
         if select_mode == 'int':
             ExtractAndCollect(main_dict_nucl).do_INT(main_dict_intron2, rec, log)
             main_dict_nucl.update(main_dict_intron2)
@@ -300,7 +299,7 @@ def extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff):
 
     return main_dict_nucl, main_dict_prot
 
-def removing_duplicate_annotations(main_dict_nucl, main_dict_prot, select_mode):
+def remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode):
     action = "removing duplicate annotations"
     log.info("%s" % action)
     ###
@@ -311,12 +310,12 @@ def removing_duplicate_annotations(main_dict_nucl, main_dict_prot, select_mode):
         remove_duplicates(main_dict_prot)
         remove_duplicates(main_dict_prot)
 
-def remove_annotations_below_taxa_cutoff(main_dict_nucl, main_dict_prot, tax_cutoff):
-    action = ("removing annotations that occur in fewer than %s taxa" % tax_cutoff)
+def remove_annos_if_below_minnumtaxa(main_dict_nucl, main_dict_prot, min_num_taxa):
+    action = ("removing annotations that occur in fewer than %s taxa" % min_num_taxa)
     log.info("%s" % action)
     ###
     for k, v in main_dict_nucl.items():
-        if len(v) < tax_cutoff:
+        if len(v) < min_num_taxa:
             del main_dict_nucl[k]
             if main_dict_prot:
                 del main_dict_prot[k]
@@ -503,13 +502,13 @@ def concatenate_successful_alignments(success_list, out_dir):
 ## MAIN
 # ------------------------------------------------------------------------------#
 def main(args):
-    in_dir, out_dir, fileext, exclude_list, len_cutoff, tax_cutoff, select_mode, verbose = unpack_input_parameters(args)
+    in_dir, out_dir, fileext, exclude_list, min_seq_length, min_num_taxa, select_mode, verbose = unpack_input_parameters(args)
     log = setup_logger(verbose)
     
-    main_dict_nucl, main_dict_prot = extract_and_collect_annotations(in_dir, fileext, select_mode, len_cutoff)
-    removing_duplicate_annotations(main_dict_nucl, main_dict_prot, select_mode)
+    main_dict_nucl, main_dict_prot = parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length)
+    remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode)
 
-    remove_annotations_below_taxa_cutoff(main_dict_nucl, main_dict_prot, tax_cutoff)
+    remove_annos_if_below_minnumtaxa(main_dict_nucl, main_dict_prot, min_num_taxa)
     remove_orfs(main_dict_nucl, main_dict_prot)
     remove_user_defined_genes(main_dict_nucl, main_dict_prot, exclude_list, select_mode)
     
@@ -550,10 +549,10 @@ if __name__ == '__main__':
     parser.add_argument("--excllist", "-e", type=list, required=False,
                         default=['rps12'],
                         help="(Optional) List of genes to be excluded")
-    parser.add_argument("--lencutoff", "-l", type=int, required=False,
-                        help="(Optional) Sequence length below which regions will not be extracted",
-                        default=1)
-    parser.add_argument("--taxcutoff", "-t", type=int, required=False,
+    parser.add_argument("--minseqlength", "-l", type=int, required=False,
+                        help="(Optional) Minimal sequence length (in bp) below which regions will not be extracted",
+                        default=3)
+    parser.add_argument("--minnumtaxa", "-t", type=int, required=False,
                         help="(Optional) Minimum number of taxa in which a region must be present to be extracted",
                         default=1)
     parser.add_argument("--verbose", "-v", action="version", version="%(prog)s " + __version__,
