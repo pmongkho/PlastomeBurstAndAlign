@@ -225,15 +225,14 @@ def extract_INT_internal(rec, feature, gene_name, offset):
 # ------------------------------------------------------------------------------#
 def remove_duplicates(my_dict):
     for k, v in my_dict.items():
-        idtags = []
-        for counter, seqrec in enumerate(v):
-            if seqrec.id in idtags:
-                # v.pop(counter)
-                del v[counter]
-            else:
-                idtags.append(seqrec.id)
-        my_dict[k] = v
-    # return my_dict
+        unique_items = []
+        seen_ids = set()
+        for seqrec in v:
+            if seqrec.id not in seen_ids:
+                seen_ids.add(seqrec.id)
+                unique_items.append(seqrec)
+        my_dict[k] = unique_items
+    # No need to return my_dict because it is modified in place
 
 
 # ------------------------------------------------------------------------------#
@@ -308,10 +307,8 @@ def remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode):
     log.info(action)
     ###
     remove_duplicates(main_dict_nucl)
-    remove_duplicates(main_dict_nucl)
-    
+
     if select_mode == 'cds':
-        remove_duplicates(main_dict_prot)
         remove_duplicates(main_dict_prot)
 
 def remove_annos_if_below_minnumtaxa(main_dict_nucl, main_dict_prot, min_num_taxa):
