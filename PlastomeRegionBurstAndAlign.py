@@ -39,7 +39,7 @@ class ExtractAndCollect:
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
                     gene_name = feature.qualifiers['gene'][0]
-                    seq_name = gene_name + '_' + rec.name
+                    seq_name = gene_name + '_' + rec.name   #f"{gene_name}_{rec.name}"
 
                     # Step 1. Extract nucleotide sequence of each gene
                     seq_obj = feature.extract(rec).seq
@@ -173,7 +173,7 @@ class ExtractAndCollect:
                 # Step 1.a. If one intron in gene:
                 if len(feature.location.parts) == 2:
                     try:
-                        gene_name = gene_name_base_safe + "_intron1"
+                        gene_name = gene_name_base_safe + "_intron1" #f"{gene_name_base_safe}_intron1"
                         seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 0)
                         if gene_name not in self.main_odict_nucl.keys():
                             self.main_odict_nucl[gene_name] = [seq_rec]
@@ -191,7 +191,7 @@ class ExtractAndCollect:
                     # Next lines is important b/c feature is overwritten in extract_intron_internal()
                     copy_feature = deepcopy(feature)
                     try:
-                        gene_name = gene_name_base_safe + "_intron1"
+                        gene_name = gene_name_base_safe + "_intron1"  #f"{gene_name_base_safe}_intron1"
                         seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 0)
                         if gene_name not in self.main_odict_nucl.keys():
                             self.main_odict_nucl[gene_name] = [seq_rec]
@@ -207,7 +207,7 @@ class ExtractAndCollect:
                         # pass
                     feature = copy_feature
                     try:
-                        gene_name = gene_name_base_safe + "_intron2"
+                        gene_name = gene_name_base_safe + "_intron2"  #f"{gene_name_base_safe}_intron2"
                         seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 1)
                         if gene_name not in main_odict_intron2.keys():
                             main_odict_intron2[gene_name] = [seq_rec]
@@ -412,8 +412,8 @@ def multiple_sequence_alignment_nucleotide(main_odict_nucl):
     if main_odict_nucl.items():
         for k in main_odict_nucl.keys():
             # Define input and output names
-            out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
-            out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
+            out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta') #f"nucl_{k}.unalign.fasta"
+            out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta') #f"nucl_{k}.aligned.fasta"
 
         # Step 1. Determine number of CPU core available
             # TO DO #
@@ -558,21 +558,50 @@ def main(args):
     # TO DO
     # Include function here that tests if the third-party script mafft is even available on the system
     
+    """ Loads all genome records of a given folder one by one, parses each, and extracts
+    all annotations in accordance with the user input
+    INPUT:  file location, user specification on cds/int/igs to extract, min_seq_length
+    OUTPUT: nucleotide and protein dictionaries
+    """
     main_odict_nucl, main_odict_prot = parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length)
+    
+    #Basically a bunch of functions removing annotations. 
     remove_duplicate_annos(main_odict_nucl, main_odict_prot, select_mode)
 
     remove_annos_if_below_minnumtaxa(main_odict_nucl, main_odict_prot, min_num_taxa)
+    
     remove_orfs(main_odict_nucl, main_odict_prot)
+    
+    #Appears to remove intron section?
     remove_user_defined_genes(main_odict_nucl, main_odict_prot, exclude_list, select_mode)
     
+    """ Takes a dictionary of nucleotide sequences and saves all sequences of the same region
+    into an unaligned nucleotide matrix
+    INPUT: dictionary of sorted nucleotide sequences of all regions
+    OUTPUT: unaligned nucleotide matrix for each region, saved to file
+    """
     save_regions_as_unaligned_matrices(main_odict_nucl)
     
     if not select_mode == 'cds':
         multiple_sequence_alignment_nucleotide(main_odict_nucl)
-
+        """
+        Iterates over all unaligned nucleotide matrices and aligns each via a third-party software tool
+        INPUT:  - dictionary of sorted nucleotide sequences of all regions (used only for region names!)
+                - unaligned nucleotide matrices (present as files in FASTA format)
+        OUTPUT: aligned nucleotide matrices (present as files in FASTA format)
+        """
     if select_mode == 'cds':
         conduct_protein_alignment_and_back_translation(main_odict_prot)
+        """ Iterates over all unaligned PROTEIN matrices, aligns them as proteins via
+        third-party software, and back-translates each alignment to NUCLEOTIDES
+        INPUT:  dictionary of sorted PROTEIN sequences of all regions
+        OUTPUT: aligned nucleotide matrices (present as files in NEXUS format)
+        """
 
+    """ Converts alignments to NEXUS format; then collect all successfully generated alignments
+    INPUT:  dictionary of region names
+    OUTPUT: list of alignments
+    """
     success_list = collect_successful_alignments(main_odict_nucl)
     concatenate_successful_alignments(success_list)
     
