@@ -109,8 +109,8 @@ class ExtractAndCollect:
                             exact_location = FeatureLocation(start_pos, end_pos)
                         except:
                             log.warning(
-                                '\t%s: Exception occurred for IGS between `%s` (start pos: %s) and `%s` (end pos:%s ). Skipping this IGS ...' % (
-                                fname, cur_feat_name, start_pos, adj_feat_name, end_pos))
+                                f'\t{fname}: Exception occurred for IGS between `{cur_feat_name}` (start pos: {start_pos}) and `{adj_feat_name}` (end pos:{end_pos}). Skipping this IGS ...'
+                            )
                             continue
                     # Step 5. Make IGS SeqRecord
                     seq_obj = exact_location.extract(rec).seq
@@ -134,8 +134,7 @@ class ExtractAndCollect:
                 # Handle genes with compound locations
                 else:
                     log.warning(
-                        "%s: the IGS between `%s` and `%s` is currently not handled and has to be extracted manually. Skipping this IGS ..." % (
-                        fname, cur_feat_name, adj_feat_name))
+                        f"{fname}: the IGS between `{cur_feat_name}` and `{adj_feat_name}` is currently not handled and has to be extracted manually. Skipping this IGS ...")
                     continue
 
     def do_INT(self, main_dict_intron2, rec):
@@ -146,8 +145,8 @@ class ExtractAndCollect:
                     gene_name_base_SAFE = gene_name_base.replace('-', '_')
                     gene_name_base_SAFE = sub(r'[^\w]', '', gene_name_base_SAFE)
                 except:
-                    log.warning("Unable to extract gene name for CDS starting at `%s` of `%s`. Skipping feature ..." % (
-                    feature.location.start, rec.id))
+                    log.warning(f"Unable to extract gene name for CDS starting at `{feature.location.start}` of `{rec.id}`. Skipping feature ...")
+
                     continue
                 # Step 1. Limiting the search to CDS containing introns
                 # Step 1.a. If one intron in gene:
@@ -160,7 +159,7 @@ class ExtractAndCollect:
                         else:
                             self.main_dict_nucl[gene_name].append(seq_rec)
                     except:
-                        log.warning("An error for `%s` occurred" % (gene_name))
+                        log.warning(f"An error for `{gene_name}` occurred")
                         pass
                 # Step 1.b. If two introns in gene:
                 if len(feature.location.parts) == 3:
@@ -173,7 +172,7 @@ class ExtractAndCollect:
                         else:
                             self.main_dict_nucl[gene_name].append(seq_rec)
                     except:
-                        log.critical("An error occurred for `%s`" % (gene_name))
+                        log.critical(f"An error for `{gene_name}` occurred")
                         raise Exception()
                         # pass
                     feature = copy_feature
@@ -185,7 +184,7 @@ class ExtractAndCollect:
                         else:
                             main_dict_intron2[gene_name].append(seq_rec)
                     except:
-                        log.warning("An issue occurred for `%s`" % (gene_name))
+                        log.warning(f"An issue occurred for `{gene_name}`")
                         pass
 
 # -----------------------------------------------------------------#
@@ -219,7 +218,7 @@ def extract_INT_internal(rec, feature, gene_name, offset):
         seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
         return (seq_rec, gene_name)
     except:
-        log.critical("Unable to conduct intron extraction for %s" % feature.qualifiers['gene'])
+        log.critical(f"Unable to conduct intron extraction for {feature.qualifiers['gene']}")
         raise Exception()
 
 
@@ -251,12 +250,12 @@ def setup_logger(verbose):
 def unpack_input_parameters(args):
     in_dir = args.inpd
     if not os.path.exists(in_dir):
-        logging.critical("Input directory `%s` does not exist." % in_dir)
+        logging.critical(f"Input directory `{in_dir}` does not exist.")
         raise Exception()
     global out_dir
     out_dir = args.outd
     if not os.path.exists(out_dir):
-        logging.critical("Output directory `%s` does not exist." % out_dir)
+        logging.critical(f"Output directory `{out_dir}` does not exist.")
         raise Exception()
     
     fileext = args.fileext
@@ -274,7 +273,7 @@ def parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length
     Output: nucleotide and protein dictionaries
     '''
     action = "parse genome records and extract their annotations"
-    log.info("%s" % action)
+    log.info(action)
     ###
     main_dict_nucl = OrderedDict()
     main_dict_prot = OrderedDict() if select_mode == 'cds' else None
@@ -299,14 +298,14 @@ def parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length
             main_dict_nucl.update(main_dict_intron2)
 
         if not main_dict_nucl.items():
-            log.critical("No items in main dictionary: %s" % out_dir)
+            log.critical(f"No items in main dictionary: {out_dir}")
             raise Exception()
 
     return main_dict_nucl, main_dict_prot
 
 def remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode):
     action = "removing duplicate annotations"
-    log.info("%s" % action)
+    log.info(action)
     ###
     remove_duplicates(main_dict_nucl)
     remove_duplicates(main_dict_nucl)
@@ -317,7 +316,7 @@ def remove_duplicate_annos(main_dict_nucl, main_dict_prot, select_mode):
 
 def remove_annos_if_below_minnumtaxa(main_dict_nucl, main_dict_prot, min_num_taxa):
     action = ("removing annotations that occur in fewer than %s taxa" % min_num_taxa)
-    log.info("%s" % action)
+    log.info(action)
     ###
     for k, v in main_dict_nucl.items():
         if len(v) < min_num_taxa:
@@ -327,7 +326,7 @@ def remove_annos_if_below_minnumtaxa(main_dict_nucl, main_dict_prot, min_num_tax
 
 def remove_orfs(main_dict_nucl, main_dict_prot):
     action = "removing ORFs"
-    log.info("%s" % action)
+    log.info(action)
     ###
     list_of_orfs = [orf for orf in main_dict_nucl.keys() if "orf" in orf]
     for orf in list_of_orfs:
@@ -337,7 +336,7 @@ def remove_orfs(main_dict_nucl, main_dict_prot):
 
 def remove_user_defined_genes(main_dict_nucl, main_dict_prot, exclude_list, select_mode):
     action = "removing user-defined genes"
-    log.info("%s" % action)
+    log.info(action)
     ###
     if exclude_list:
         if select_mode == 'int':
@@ -349,7 +348,7 @@ def remove_user_defined_genes(main_dict_nucl, main_dict_prot, exclude_list, sele
                 if select_mode == 'cds' and main_dict_prot:
                     del main_dict_prot[excluded]
             else:
-                log.warning("Region `%s` to be excluded but unable to be found in infile." % excluded)
+                log.warning(f"Region `{excluded}` to be excluded but unable to be found in infile.")
                 pass
 
 def save_regions_as_unaligned_matrices(main_dict_nucl, out_dir):
@@ -359,7 +358,7 @@ def save_regions_as_unaligned_matrices(main_dict_nucl, out_dir):
     Output: unaligned nucleotide matrix for each region, saved to file
     '''
     action = "saving individual regions as unaligned nucleotide matrices"
-    log.info("%s" % action)
+    log.info(action)
     ###
     for k, v in main_dict_nucl.items():
         # Define input and output names
@@ -375,7 +374,7 @@ def multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir):
     Output: aligned nucleotide matrices (present as files in FASTA format)
     '''
     action = "conducting multiple sequence alignment based on nucleotide sequence data"
-    log.info("%s" % action)
+    log.info(action)
     ###
     if main_dict_nucl.items():
         for k in main_dict_nucl.keys():
@@ -403,7 +402,7 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
     Output: aligned nucleotide matrices (present as files in NEXUS format)
     '''
     action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
-    log.info("%s" % action)
+    log.info(action)
     ###
     try:
         for k, v in main_dict_prot.items():
@@ -457,7 +456,7 @@ def collect_successful_alignments(main_dict_nucl, out_dir):
     Output: list of alignments
     '''
     action = "collecting all successful alignments"
-    log.info("%s" % action)
+    log.info(action)
     ###
     success_list = []
     for k in main_dict_nucl.keys():
@@ -468,7 +467,7 @@ def collect_successful_alignments(main_dict_nucl, out_dir):
         try:
             AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
         except:
-            log.warning("Unable to convert alignment of `%s` from FASTA to NEXUS" % k)
+            log.warning(f"Unable to convert alignment of `{k}` from FASTA to NEXUS")
             continue  # skip to next k in loop, so that k is not included in success_list
         # Step 3. Import NEXUS files and append to list for concatenation
         try:
@@ -480,13 +479,13 @@ def collect_successful_alignments(main_dict_nucl, out_dir):
             alignm_nexus = Nexus.Nexus.Nexus(nexus_string)
             success_list.append((k, alignm_nexus))  # Function 'Nexus.Nexus.combine' needs a tuple.
         except:
-            log.warning("Unable to add alignment of `%s` to concatenation" % k)
+            log.warning(f"Unable to add alignment of `{k}` to concatenation")
             pass
     return success_list
 
 def concatenate_successful_alignments(success_list, out_dir):
     action = "concatenate all successful alignments (in no particular order)"
-    log.info("%s" % action)
+    log.info(action)
     ###
     # Step 1. Define output names
     out_fn_nucl_concat_fasta = os.path.join(out_dir, 'nucl_' + str(len(success_list)) + 'concat.aligned.fasta')
@@ -531,7 +530,7 @@ def main(args):
     concatenate_successful_alignments(success_list, out_dir)
     
     action = "end of script\n"
-    log.info("%s" % action)
+    log.info(action)
     ###
     quit()
 
