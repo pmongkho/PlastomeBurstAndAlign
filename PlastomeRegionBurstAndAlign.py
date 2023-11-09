@@ -464,7 +464,7 @@ def multiple_sequence_alignment_nucleotide(main_dict_nucl, out_dir):
 
 
 def process_protein_alignment(k, v, out_dir, path_to_back_transl_helper, num_threads):
-    # Define file names
+    # Define input and output names
     out_fn_unalign_prot = os.path.join(out_dir, f"prot_{k}.unalign.fasta")
     out_fn_aligned_prot = os.path.join(out_dir, f"prot_{k}.aligned.fasta")
     out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
@@ -478,6 +478,7 @@ def process_protein_alignment(k, v, out_dir, path_to_back_transl_helper, num_thr
     mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
 
     # Step 4. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
+    # Note: For some reason, the path_to_back_transl_helper spits only works if FASTA files are specified, not if NEXUS files are specified
     cmd = [
         "python3",
         path_to_back_transl_helper,
@@ -498,14 +499,21 @@ def process_protein_alignment(k, v, out_dir, path_to_back_transl_helper, num_thr
 
 def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
     """
-    ... (original comment)
+    Iterates over all unaligned PROTEIN matrices, aligns them as proteins via third-party software, and back-translates each alignment to NUCLEOTIDES
+    Input:  dictionary of sorted PROTEIN sequences of all regions
+    Output: aligned nucleotide matrices (present as files in NEXUS format)
     """
-    log.info(
-        "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
-    )
+    action = "conducting multiple sequence alignment based on protein sequence data, followed by back-translation to nucleotides"
 
+    log.info(action)
+
+    # Step X. Determine number of CPU core available
+    ## TO DO ##
+    # Automatically determine number of threads available #
+    # Have the number of threads saved as num_threads
     num_threads = os.cpu_count()  # Automatically determine number of threads available
 
+    # Step 3. Check if back-translation script exists
     path_to_back_transl_helper = os.path.join(
         os.path.dirname(__file__), "align_back_trans.py"
     )
@@ -531,6 +539,7 @@ def conduct_protein_alignment_and_back_translation(main_dict_prot, out_dir):
             k = future_to_protein[future]
             try:
                 future.result()  # If needed, you can handle results here
+                
             except Exception as exc:
                 log.error("%r generated an exception: %s" % (k, exc))
 
