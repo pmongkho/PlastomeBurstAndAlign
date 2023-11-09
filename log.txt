@@ -1,0 +1,24 @@
+###new code with cpu cores cdsrun
+
+Nucleotide sequence for ndhF_KY045817 is length 2179 (not a multiple of three).
+2023-11-08 17:57:32 [INFO] collecting all successful alignments
+2023-11-08 17:57:37 [WARNING] Unable to convert alignment of `ycf1` from FASTA to NEXUS
+2023-11-08 17:57:38 [WARNING] Unable to convert alignment of `ndhF` from FASTA to NEXUS
+2023-11-08 17:57:38 [INFO] concatenate all successful alignments (in no particular order)
+2023-11-08 17:57:40 [INFO] end of script
+
+Time taken for run: 49.12 seconds
+Time taken for rmtree: 0.03 seconds
+benchmarking1 directory and its contents have been deleted.
+
+#old code cdsrun
+Nucleotide sequence for ndhF_KY045817 is length 2179 (not a multiple of three).
+2023-11-08 18:00:49 [INFO] collecting all successful alignments
+2023-11-08 18:00:54 [WARNING] Unable to convert alignment of `ycf1` from FASTA to NEXUS
+2023-11-08 18:00:55 [WARNING] Unable to convert alignment of `ndhF` from FASTA to NEXUS
+2023-11-08 18:00:55 [INFO] concatenate all successful alignments (in no particular order)
+2023-11-08 18:00:57 [INFO] end of script
+
+Time taken for run: 55.19 seconds
+Time taken for rmtree: 0.04 seconds
+benchmarking1 directory and its contents have been deleted.
