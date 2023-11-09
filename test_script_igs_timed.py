@@ -22,9 +22,7 @@ MYSCRIPT = "PlastomeOldCode.py"
 full_script_path = os.path.join(script_dir, MYSCRIPT)
 
 # Define the path to the output directory
-folder_CDS = "benchmarking1/output_CDS"
-
-# Wrap each step that you want to time with the timed_function
+folder_IGS = "benchmarking1/output_IGS"
 
 # Step 1: Extract the tar.gz file
 timed_function(subprocess.run, ["tar", "-xvf", "benchmarking1.tar.gz"])
@@ -33,20 +31,20 @@ timed_function(subprocess.run, ["tar", "-xvf", "benchmarking1.tar.gz"])
 os.chdir("benchmarking1")
 
 # Step 3: Create necessary directories
-timed_function(subprocess.run, ["mkdir", "-p", folder_CDS])
-timed_function(subprocess.run, ["mkdir", "-p", f"{folder_CDS}/01_unalign"])
-timed_function(subprocess.run, ["mkdir", "-p", f"{folder_CDS}/02_aligned"])
-timed_function(subprocess.run, ["mkdir", "-p", f"{folder_CDS}/02_aligned/fasta"])
-timed_function(subprocess.run, ["mkdir", "-p", f"{folder_CDS}/02_aligned/nexus"])
+subprocess.run(["mkdir", "-p", folder_IGS])
+subprocess.run(["mkdir", "-p", f"{folder_IGS}/01_unalign"])
+subprocess.run(["mkdir", "-p", f"{folder_IGS}/02_aligned"])
+subprocess.run(["mkdir", "-p", f"{folder_IGS}/02_aligned/fasta"])
+subprocess.run(["mkdir", "-p", f"{folder_IGS}/02_aligned/nexus"])
 
 # Step 4: Run your Python script using the full_script_path
 timed_function(
     subprocess.run,
-    ["python", full_script_path, "-i", ".", "-o", folder_CDS, "-s", "cds"],
+    ["python", full_script_path, "-i", ".", "-o", folder_IGS, "-s", "igs"],
 )
 
+# run this to remove the folder, if not can comment out
 # Step 5: Delete the benchmarking1 directory and its contents
-# Make sure you really want to delete before uncommenting the next lines
 os.chdir(script_dir)  # Move back to the directory containing the test script
-timed_function(shutil.rmtree, "benchmarking1")
+shutil.rmtree("benchmarking1")
 print("benchmarking1 directory and its contents have been deleted.")
