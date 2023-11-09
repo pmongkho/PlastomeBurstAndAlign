@@ -22,3 +22,17 @@ Nucleotide sequence for ndhF_KY045817 is length 2179 (not a multiple of three).
 Time taken for run: 55.19 seconds
 Time taken for rmtree: 0.04 seconds
 benchmarking1 directory and its contents have been deleted.
+
+
+#with parallelization with futures
+Nucleotide sequence for ycf1_NC_036966 is length 581 (not a multiple of three).
+2023-11-08 18:12:11 [INFO] collecting all successful alignments
+2023-11-08 18:12:16 [WARNING] Unable to convert alignment of `ycf1` from FASTA to NEXUS
+2023-11-08 18:12:17 [WARNING] Unable to convert alignment of `ndhF` from FASTA to NEXUS
+2023-11-08 18:12:17 [INFO] concatenate all successful alignments (in no particular order)
+2023-11-08 18:12:19 [INFO] end of script
+
+Time taken for run: 26.58 seconds
+Time taken for rmtree: 0.05 seconds
+benchmarking1 directory and its contents have been deleted.
+(PlastomeBurstAndAlign) phongsavanhmongkhonvilay@AMacbook PlastomeBurstAndAlign % 
