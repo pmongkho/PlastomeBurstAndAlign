@@ -8,6 +8,11 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+output_CDS_correct/
+benchmarking1.tar.gz
+benchmarking2.tar.gz
+benchmarking2
+benchmarking1_correct
 build/
 develop-eggs/
 dist/
