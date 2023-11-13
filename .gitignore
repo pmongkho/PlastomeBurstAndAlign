@@ -13,6 +13,7 @@ benchmarking1.tar.gz
 benchmarking2.tar.gz
 benchmarking2
 benchmarking1_correct
+*_check_exact.py
 build/
 develop-eggs/
 dist/
