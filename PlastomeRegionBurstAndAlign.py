@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """ Extracts and aligns coding and non-coding regions across multiple plastid genomes
 """
-__version__ = 'm_gruenstaeudl@fhsu.edu|Wed 08 Nov 2023 06:29:58 PM CST'
+__version__ = "m_gruenstaeudl@fhsu.edu|Thu 09 Nov 2023 10:18:47 PM CST"
 
 # ------------------------------------------------------------------------------#
 # IMPORTS
 import argparse
-from Bio import SeqIO, Nexus, SeqRecord, AlignIO  # line necessary; see: https://www.biostars.org/p/13099/
-from Bio.Align import Applications  # line is necessary for similar reason stated in: https://www.biostars.org/p/13099/
-from Bio.SeqFeature import FeatureLocation, CompoundLocation, ExactPosition
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from Bio import (
+    SeqIO, Nexus, SeqRecord, AlignIO
+)  # line necessary; see: https://www.biostars.org/p/13099/
+from Bio.Align import (
+    Applications
+)  # line necessary; see: https://www.biostars.org/p/13099/
+from Bio.SeqFeature import (
+    FeatureLocation, CompoundLocation, ExactPosition
+)
 import coloredlogs
 from collections import OrderedDict
 from copy import deepcopy
@@ -19,9 +26,8 @@ from re import sub
 import subprocess
 # ------------------------------------------------------------------------------#
 # DEBUGGING HELP
-import ipdb
+# import ipdb
 # ipdb.set_trace()
-
 # -----------------------------------------------------------------#
 # CLASSES AND FUNCTIONS
 
@@ -75,6 +81,7 @@ class ExtractAndCollect:
         OUTPUT: saves to global main_odict_nucl and to global main_odict_prot
         """
         for feature in rec.features:
+
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
                     gene_name = feature.qualifiers['gene'][0]
@@ -82,7 +89,9 @@ class ExtractAndCollect:
 
                     # Step 1. Extract nucleotide sequence of each gene
                     seq_obj = feature.extract(rec).seq
-                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    seq_rec = SeqRecord.SeqRecord(
+                        seq_obj, id=seq_name, name="", description=""
+                    )
                     if gene_name in self.main_odict_nucl.keys():
                         tmp = self.main_odict_nucl[gene_name]
                         tmp.append(seq_rec)
@@ -91,7 +100,9 @@ class ExtractAndCollect:
                         self.main_odict_nucl[gene_name] = [seq_rec]
 
                     # Step 2. Translate nucleotide sequence to amino acid sequence
-                    seq_obj = feature.extract(rec).seq.translate(table=11)  # , cds=True)
+                    seq_obj = feature.extract(rec).seq.translate(
+                        table=11
+                    )  # , cds=True)
 
                     # Step 3. Test for minimum sequence length
                     if len(seq_obj) >= min_seq_length:
@@ -100,9 +111,12 @@ class ExtractAndCollect:
                         continue
 
                     # Step 4. Save protein sequence to output dictionary
-                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
-                    if gene_name in self.main_odict_prot.keys():
-                        tmp = self.main_odict_prot[gene_name]
+                    seq_rec = SeqRecord.SeqRecord(
+                        seq_obj, id=seq_name, name="", description=""
+                    )
+                    if gene_name in main_odict_prot.keys():
+                        tmp = main_odict_prot[gene_name]
+
                         tmp.append(seq_rec)
                         self.main_odict_prot[gene_name] = tmp
                     else:
@@ -115,38 +129,42 @@ class ExtractAndCollect:
         # Step 1. Extract all genes from record (i.e., cds, trna, rrna)
         # Resulting list contains adjacent features in order of appearance on genome
         # Note: No need to include "if feature.type=='tRNA'", because all tRNAs are also annotated as genes
-        all_genes = [feature for feature in rec.features if (
-                feature.type == 'gene' and
-                'gene' in feature.qualifiers
-        )]
+        all_genes = [
+            f for f in rec.features
+            if (f.type == "gene" and "gene" in f.qualifiers)
+        ]
         # Note: The statement "if feature.qualifier['gene'][0] not 'matK'" is necessary, as matK is located inside trnK
         # TO DO #
         # Isn't there a better way to handle matK?!
-        all_genes_minus_matk = [feature for feature in all_genes if feature.qualifiers['gene'][0] != 'matK']
+        all_genes_minus_matk = [
+            f for f in all_genes if f.qualifiers["gene"][0] != "matK"
+        ]
 
         # Step 2. Loop through genes
         for count, idx in enumerate(range(0, len(all_genes_minus_matk) - 1), 1):
             cur_feat = all_genes_minus_matk[idx]
-            cur_feat_name = cur_feat.qualifiers['gene'][0]
+            cur_feat_name = cur_feat.qualifiers["gene"][0]
             adj_feat = all_genes_minus_matk[idx + 1]
-            adj_feat_name = adj_feat.qualifiers['gene'][0]
+            adj_feat_name = adj_feat.qualifiers["gene"][0]
 
             # Step 3. Define names of IGS
-            if 'gene' in cur_feat.qualifiers and 'gene' in adj_feat.qualifiers:
-                cur_feat_name = cur_feat_name
-                cur_feat_name_safe = cur_feat_name.replace('-', '_')
-                cur_feat_name_safe = sub(r'\W', '', cur_feat_name_safe)
-                adj_feat_name = adj_feat_name
-                adj_feat_name_safe = adj_feat_name.replace('-', '_')
-                adj_feat_name_safe = sub(r'\W', '', adj_feat_name_safe)
-                igs_name = cur_feat_name_safe + '_' + adj_feat_name_safe
-                inv_igs_name = adj_feat_name_safe + '_' + cur_feat_name_safe
+            if "gene" in cur_feat.qualifiers and "gene" in adj_feat.qualifiers:
+                cur_feat_name_safe = cur_feat_name.replace("-", "_")
+                cur_feat_name_safe = sub(r"\W", "", cur_feat_name_safe)
+                adj_feat_name_safe = adj_feat_name.replace("-", "_")
+                adj_feat_name_safe = sub(r"\W", "", adj_feat_name_safe)
+                igs_name = cur_feat_name_safe + "_" + adj_feat_name_safe
+                inv_igs_name = adj_feat_name_safe + "_" + cur_feat_name_safe
 
                 # Only operate on genes that do not have compound locations (as it only messes things up)
-                if type(cur_feat.location) is not CompoundLocation and \
-                        type(adj_feat.location) is not CompoundLocation:
+                if (
+                    type(cur_feat.location) is not CompoundLocation
+                    and type(adj_feat.location) is not CompoundLocation
+                ):
                     # Step 4. Make IGS SeqFeature
-                    start_pos = ExactPosition(cur_feat.location.end)  # +1)  Note: It's unclear if a +1 is needed here.
+                    start_pos = ExactPosition(
+                        cur_feat.location.end
+                    )  # +1)  Note: It's unclear if +1 is needed here.
                     end_pos = ExactPosition(adj_feat.location.start)
                     if int(start_pos) >= int(end_pos):
                         continue  # If there is no IGS, then simply skip this gene pair
@@ -155,25 +173,29 @@ class ExtractAndCollect:
                             exact_location = FeatureLocation(start_pos, end_pos)
                         except Exception as e:
                             log.warning(
-                                f'\t{fname}: Exception occurred for IGS between '
-                                f'`{cur_feat_name}` (start pos: {start_pos}) and '
-                                f'`{adj_feat_name}` (end pos:{end_pos}). '
-                                f'Skipping this IGS ...\n'
-                                f'Error message: {e}'
+                                f"\t{fname}: Exception occurred for IGS between "
+                                f"`{cur_feat_name}` (start pos: {start_pos}) and "
+                                f"`{adj_feat_name}` (end pos:{end_pos}). "
+                                f"Skipping this IGS ...\n"
+                                f"Error message: {e}"
                             )
                             continue
-
                     # Step 5. Make IGS SeqRecord
                     seq_obj = exact_location.extract(rec).seq
-                    seq_name = igs_name + '_' + rec.name
-                    seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+                    seq_name = igs_name + "_" + rec.name
+                    seq_rec = SeqRecord.SeqRecord(
+                        seq_obj, id=seq_name, name="", description=""
+                    )
                     # Step 6. Testing for minimum sequence length
                     if len(seq_obj) >= min_seq_length:
                         pass
                     else:
                         continue
                     # Step 7. Attach seqrecord to growing dictionary
-                    if igs_name in self.main_odict_nucl.keys() or inv_igs_name in self.main_odict_nucl.keys():
+                    if (
+                        igs_name in self.main_odict_nucl.keys()
+                        or inv_igs_name in self.main_odict_nucl.keys()
+                    ):
                         if igs_name in self.main_odict_nucl.keys():
                             tmp = self.main_odict_nucl[igs_name]
                             tmp.append(seq_rec)
@@ -195,11 +217,11 @@ class ExtractAndCollect:
         OUTPUT: saves to global main_odict_nucl
         """
         for feature in rec.features:
-            if feature.type == 'CDS' or feature.type == 'tRNA':
+            if feature.type == "CDS" or feature.type == "tRNA":
                 try:
-                    gene_name_base = feature.qualifiers['gene'][0]
-                    gene_name_base_safe = gene_name_base.replace('-', '_')
-                    gene_name_base_safe = sub(r'\W', '', gene_name_base_safe)
+                    gene_name_base = feature.qualifiers["gene"][0]
+                    gene_name_base_safe = gene_name_base.replace("-", "_")
+                    gene_name_base_safe = sub(r"\W", "", gene_name_base_safe)
                 except Exception as e:
                     log.warning(
                         f"Unable to extract gene name for CDS starting "
@@ -213,7 +235,10 @@ class ExtractAndCollect:
                 if len(feature.location.parts) == 2:
                     try:
                         gene_name = gene_name_base_safe + "_intron1" #f"{gene_name_base_safe}_intron1"
-                        seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 0)
+                        seq_rec, gene_name = extract_intron_internal(
+                            rec, feature, gene_name, 0
+                        )
+
                         if gene_name not in self.main_odict_nucl.keys():
                             self.main_odict_nucl[gene_name] = [seq_rec]
                         else:
@@ -227,11 +252,17 @@ class ExtractAndCollect:
                         pass
                 # Step 1.b. If two introns in gene:
                 if len(feature.location.parts) == 3:
-                    # Next lines is important b/c feature is overwritten in extract_intron_internal()
-                    copy_feature = deepcopy(feature)
+                    copy_feature = deepcopy(
+                        feature
+                    )  # Important b/c feature is overwritten in extract_intron_internal()
                     try:
+
                         gene_name = gene_name_base_safe + "_intron1"  #f"{gene_name_base_safe}_intron1"
-                        seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 0)
+       
+                        seq_rec, gene_name = extract_intron_internal(
+                            rec, feature, gene_name, 0
+                        )
+
                         if gene_name not in self.main_odict_nucl.keys():
                             self.main_odict_nucl[gene_name] = [seq_rec]
                         else:
@@ -246,8 +277,13 @@ class ExtractAndCollect:
                         # pass
                     feature = copy_feature
                     try:
+
                         gene_name = gene_name_base_safe + "_intron2"  #f"{gene_name_base_safe}_intron2"
-                        seq_rec, gene_name = extract_intron_internal(rec, feature, gene_name, 1)
+
+                        seq_rec, gene_name = extract_intron_internal(
+                            rec, feature, gene_name, 1
+                        )
+
                         if gene_name not in main_odict_intron2.keys():
                             main_odict_intron2[gene_name] = [seq_rec]
                         else:
@@ -452,11 +488,11 @@ def mafft_align(input_file, output_file, num_threads):
     # subprocess.call(['mafft', '--auto', out_fn_unalign_prot, '>', out_fn_aligned_prot])
     # CURRENT WAY:
     # Perform sequence alignment using MAFFT
-    mafft_cline = Applications.MafftCommandline(input=input_file,
-                                                adjustdirection=True,
-                                                thread=num_threads)
+    mafft_cline = Applications.MafftCommandline(
+        input=input_file, adjustdirection=True, thread=num_threads
+    )
     stdout, stderr = mafft_cline()
-    with open(output_file, 'w') as hndl:
+    with open(output_file, "w") as hndl:
         hndl.write(stdout)
 
 
@@ -465,15 +501,19 @@ def mafft_align(input_file, output_file, num_threads):
 # The function "extract_intron_internal()" is currently not being used and needs to be integrated
 def extract_intron_internal(rec, feature, gene_name, offset):
     try:
-        feature.location = FeatureLocation(feature.location.parts[offset].end,
-                                           feature.location.parts[offset + 1].start)
+        feature.location = FeatureLocation(
+            feature.location.parts[offset].end, feature.location.parts[offset + 1].start
+        )
     except Exception:
-        feature.location = FeatureLocation(feature.location.parts[offset + 1].start,
-                                           feature.location.parts[offset].end)
+        feature.location = FeatureLocation(
+            feature.location.parts[offset + 1].start, feature.location.parts[offset].end
+        )
     try:
-        seq_name = gene_name + '_' + rec.name
+        seq_name = gene_name + "_" + rec.name
         seq_obj = feature.extract(rec).seq  # Here the actual extraction is conducted
-        seq_rec = SeqRecord.SeqRecord(seq_obj, id=seq_name, name='', description='')
+        seq_rec = SeqRecord.SeqRecord(
+            seq_obj, id=seq_name, name="", description=""
+        )
         return seq_rec, gene_name
     except Exception as e:
         log.critical(
@@ -503,7 +543,7 @@ def remove_duplicates(my_dict):
 def setup_logger(verbose):
     global log
     log = logging.getLogger(__name__)
-    log_format = '%(asctime)s [%(levelname)s] %(message)s'
+    log_format = "%(asctime)s [%(levelname)s] %(message)s"
     log_level = logging.DEBUG if verbose else logging.INFO
     coloredlogs.install(fmt=log_format, level=log_level, logger=log)
 
@@ -518,25 +558,38 @@ def unpack_input_parameters(args):
     if not os.path.exists(out_dir):
         logging.critical(f"Output directory `{out_dir}` does not exist.")
         raise Exception()
-    
+
     fileext = args.fileext
     exclude_list = args.excllist
     min_seq_length = args.minseqlength
     min_num_taxa = args.minnumtaxa
     select_mode = args.selectmode.lower()
     verbose = args.verbose
-    return in_dir, fileext, exclude_list, min_seq_length, min_num_taxa, select_mode, verbose
-
+    return (
+        in_dir,
+        out_dir,
+        fileext,
+        exclude_list,
+        min_seq_length,
+        min_num_taxa,
+        select_mode,
+        verbose,
+    )
 
 def concatenate_successful_alignments(success_list):
-    action = "concatenate all successful alignments (in no particular order)"
-    log.info(action)
+    log.info("concatenate all successful alignments (in no particular order)")
     # Step 1. Define output names
-    out_fn_nucl_concat_fasta = os.path.join(out_dir, 'nucl_' + str(len(success_list)) + 'concat.aligned.fasta')
-    out_fn_nucl_concat_nexus = os.path.join(out_dir, 'nucl_' + str(len(success_list)) + 'concat.aligned.nexus')
+    out_fn_nucl_concat_fasta = os.path.join(
+        out_dir, "nucl_" + str(len(success_list)) + "concat.aligned.fasta"
+    )
+    out_fn_nucl_concat_nexus = os.path.join(
+        out_dir, "nucl_" + str(len(success_list)) + "concat.aligned.nexus"
+    )
     # Step 2. Do concatenation
     try:
-        alignm_concat = Nexus.Nexus.combine(success_list)  # Function 'Nexus.Nexus.combine' needs a tuple.
+        alignm_concat = Nexus.Nexus.combine(
+            success_list
+        )  # Function 'Nexus.Nexus.combine' needs a tuple
     except Exception as e:
         log.critical(
             "Unable to concatenate alignments.\n"
@@ -544,25 +597,34 @@ def concatenate_successful_alignments(success_list):
         )
         raise Exception()
     # Step 3. Write concatenated alignments to file in NEXUS format
-    alignm_concat.write_nexus_data(filename=open(out_fn_nucl_concat_nexus, 'w'))
+    alignm_concat.write_nexus_data(filename=open(out_fn_nucl_concat_nexus, "w"))
     # Step 4. Convert the NEXUS file just generated to FASTA format
-    AlignIO.convert(out_fn_nucl_concat_nexus, 'nexus', out_fn_nucl_concat_fasta, 'fasta')
+    AlignIO.convert(
+        out_fn_nucl_concat_nexus, "nexus", out_fn_nucl_concat_fasta, "fasta"
+    )
 
 
 # ------------------------------------------------------------------------------#
 # MAIN
 # ------------------------------------------------------------------------------#
 def main(args):
-    (in_dir, fileext, exclude_list, min_seq_length, min_num_taxa,
-     select_mode, verbose) = unpack_input_parameters(args)
+    (
+        in_dir,
+        out_dir,
+        fileext,
+        exclude_list,
+        min_seq_length,
+        min_num_taxa,
+        select_mode,
+        verbose
+    ) = unpack_input_parameters(args)
     setup_logger(verbose)
-    
+
     # TO DO
     # Include function here that tests if the third-party script mafft is even available on the system
     
-    # main_odict_nucl, main_odict_prot = parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length)
+    # Previously: main_odict_nucl, main_odict_prot = parse_infiles_and_extract_annos(in_dir, fileext, select_mode, min_seq_length)
     extract = ExtractAndCollect(in_dir, fileext, select_mode, min_seq_length)
-
    
     extract.remove_duplicate_annos()
 
@@ -582,41 +644,81 @@ def main(args):
 
     success_list = extract.collect_successful_alignments()
     concatenate_successful_alignments(success_list)
-    
+
     log.info("end of script\n")
     quit()
 
+
 # ------------------------------------------------------------------------------#
 # ARGPARSE
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Author|Version: ' + __version__)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Author|Version: " + __version__)
     # Required
-    parser.add_argument("--inpd", "-i", type=str, required=True,
-                        help="path to input directory (which contains the GenBank files)",
-                        default="./input")
+    parser.add_argument(
+        "--inpd",
+        "-i",
+        type=str,
+        required=True,
+        help="path to input directory (which contains the GenBank files)",
+        default="./input"
+    )
     # Optional
-    parser.add_argument("--outd", "-o", type=str, required=False,
-                        help="(Optional) Path to output directory",
-                        default="./output")
-    parser.add_argument("--selectmode", "-s", type=str, required=False,
-                        help="(Optional) Type of regions to be extracted (i.e. `cds`, `int`, or `igs`)",
-                        default="cds")
-    parser.add_argument("--fileext", "-f", type=str, required=False,
-                        help="(Optional) File extension of input files",
-                        default=".gb")
-    parser.add_argument("--excllist", "-e", type=list, required=False,
-                        default=['rps12'],
-                        help="(Optional) List of genes to be excluded")
-    parser.add_argument("--minseqlength", "-l", type=int, required=False,
-                        help="(Optional) Minimal sequence length (in bp) below which regions will not be extracted",
-                        default=3)
-    parser.add_argument("--minnumtaxa", "-t", type=int, required=False,
-                        help="(Optional) Minimum number of taxa in which a region must be present to be extracted",
-                        default=1)
-    parser.add_argument("--verbose", "-v", action="version", version="%(prog)s " + __version__,
-                        help="(Optional) Enable verbose logging", default=True)
+    parser.add_argument(
+        "--outd",
+        "-o",
+        type=str,
+        required=False,
+        help="(Optional) Path to output directory",
+        default="./output"
+    )
+    parser.add_argument(
+        "--selectmode",
+        "-s",
+        type=str,
+        required=False,
+        help="(Optional) Type of regions to be extracted (i.e. `cds`, `int`, or `igs`)",
+        default="cds"
+    )
+    parser.add_argument(
+        "--fileext",
+        "-f",
+        type=str,
+        required=False,
+        help="(Optional) File extension of input files",
+        default=".gb"
+    )
+    parser.add_argument(
+        "--excllist",
+        "-e",
+        type=list,
+        required=False,
+        default=["rps12"],
+        help="(Optional) List of genes to be excluded"
+    )
+    parser.add_argument(
+        "--minseqlength",
+        "-l",
+        type=int,
+        required=False,
+        help="(Optional) Minimal sequence length (in bp) below which regions will not be extracted",
+        default=3
+    )
+    parser.add_argument(
+        "--minnumtaxa",
+        "-t",
+        type=int,
+        required=False,
+        help="(Optional) Minimum number of taxa in which a region must be present to be extracted",
+        default=1
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="version",
+        version="%(prog)s " + __version__,
+        help="(Optional) Enable verbose logging",
+        default=True
+    )
     args = parser.parse_args()
     main(args)
 # ------------------------------------------------------------------------------#
