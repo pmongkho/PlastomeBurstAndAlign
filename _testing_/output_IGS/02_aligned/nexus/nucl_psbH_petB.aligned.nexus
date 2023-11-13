@@ -1,0 +1,37 @@
+#NEXUS
+begin data;
+dimensions ntax=30 nchar=134;
+format datatype=dna missing=? gap=-;
+matrix
+psbH_petB_MW057731         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057738         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_KT749898         gtccagaagaacggataagtcctaactttcaat-------aaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_V_amazonica_NY14 gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057740         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_KY001813         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_KU234277         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057737         gtccagaagaacggataagtcctaactttcaat----aaaaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057733         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057732         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_KU189255         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057726         gtccagaagaacggataagtcctaactttcaataaaaaaaaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057741         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtattttcggaat
+psbH_petB_MW057727         gtccagaagaatggataagtcctaactttcaat-----aaaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057722         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057723         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_V_cruziana_NY21  gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MH161176         gtccagaagaacgggtaagtcctaactttc---------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgtggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057721         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057736         gtccagaagaacggataagtcctaactttcaat-----aaaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_V_boliviana_NY24 gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057735         gtccagaagaacggataagtcctaactttcaat--------aaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057729         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaattacttagtattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057730         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaattacttagtattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MW057739         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_MH161175         gtccagaagaacgggtaagtcctaacttta---------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgtggaattcttttgtttcggtatttccggaat
+psbH_petB_NC_031505        gctcagaagaacggataagtcctaactttcaat-----aaaaaaaaagaatcacttaagattgggatttctaagtaatctcattctttttggtagttcgaccgcgaaattattttgtttcggtatttccggaat
+psbH_petB_MW057725         gtccagaagaacggataagtcctaactttcaat-------aaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+psbH_petB_KY284156         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcacttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttccgtatttccggaat
+psbH_petB_MW057734         gtccagaagaacggataagtcctaactttcaat------aaaaaaaagaatcatttaggattcggatttctaggtcatctcattctgtttggtagttcgaccgcggaattcttttgtttcggtatttccggaat
+;
+end;

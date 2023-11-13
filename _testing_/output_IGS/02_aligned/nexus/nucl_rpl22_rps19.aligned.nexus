@@ -1,0 +1,37 @@
+#NEXUS
+begin data;
+dimensions ntax=30 nchar=124;
+format datatype=dna missing=? gap=-;
+matrix
+rpl22_rps19_MW057731         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttaacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_MW057738         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_KT749898         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_V_amazonica_NY14 ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttagcttttta-ttacattaat----------------acattaactatattaata------
+rpl22_rps19_MW057740         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttattgaacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_KY001813         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttagcttttta-ttacattaat----------------acattaactatattaata------
+rpl22_rps19_KU234277         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaacttttta-ttacattaat----------------acattaactatattaata------
+rpl22_rps19_MW057737         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatatttata------
+rpl22_rps19_MW057733         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttattgaacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_MW057732         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttcacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_KU189255         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttattgaacttttta-ttacattaat----------------acatgaactatattaatattatca
+rpl22_rps19_MW057726         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaacttttta-ttactttaactttttattacattaatacattaactatattaata------
+rpl22_rps19_MW057741         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_MW057727         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaacttttta-ttacattaatacatt----------cacattaactatattaata------
+rpl22_rps19_MW057722         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttattgaacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_MW057723         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_V_cruziana_NY21  ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttagcttttta-ttacattaat----------------acattaactatattaata------
+rpl22_rps19_MH161176         ------agggttttacctcatacacaccaataaaaataagaataaatcat--gagcacctatttcactttttatttacattact----------------acattaactatattacca------
+rpl22_rps19_MW057721         ------agggttttacctcacatacaccaataaaaataagaagaaatcat--gagcacttatttaacttttta---------------------------------------------------
+rpl22_rps19_MW057736         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_V_boliviana_NY24 ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttagcttttta-ttacattaat----------------acattaactatattaata------
+rpl22_rps19_MW057735         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_MW057729         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaatttttta-ttacattaat----------------acattaactatattaatattatcg
+rpl22_rps19_MW057730         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaatttttta-ttacattaat----------------acattaactatattaatattatcg
+rpl22_rps19_MW057739         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttattgaacttttta-ttacattaat----------------acattaactatattaatattatca
+rpl22_rps19_MH161175         ------agggttttacctcatacacaccaataaaaataagaataaatcat--gagcacctatttcactttttatttacattact----------------acattaactatattacca------
+rpl22_rps19_NC_031505        ------agggttttacctcacacacacca--aagaatagtaataaatcat--gaacacctatttaactttta--tgacattactacattaa---------ctattaactata------------
+rpl22_rps19_MW057725         ------agggttttacctcacacacaccaataaaaataagaataaatcatgagagcactcatttcacttttta-ttacattaat----------------acattagctatattaata------
+rpl22_rps19_KY284156         ------agggttttacctcacatacaccaataaaaataagaagaaatcat--gagcacttatttaacttttta---------------------------------------------------
+rpl22_rps19_MW057734         agtcatagggttttacctcacacacaccaataaaaataagaataaatcatgagagcacttatttaacttttta-ttacattaat----------------acattaactatattaatattatca
+;
+end;

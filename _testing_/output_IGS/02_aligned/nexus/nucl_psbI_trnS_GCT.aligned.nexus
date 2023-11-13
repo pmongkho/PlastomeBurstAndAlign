@@ -1,0 +1,37 @@
+#NEXUS
+begin data;
+dimensions ntax=30 nchar=203;
+format datatype=dna missing=? gap=-;
+matrix
+psbI_trnS_GCT_MW057731         agaataatagattttttctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057738         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttcaaattttatctattcc-------atacatttcatttatttaaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_KT749898         agaataatagattttt--ctttcctttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttctagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_V_amazonica_NY14 agaataatagatttttc--tttcctttttggtttggtttctaaatccatctttttaactttaaattttatctattccatacattatacatttcatttatctaaataaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattaaaaag-------ataaatatcaagtgagcgtaggaaacgg----
+psbI_trnS_GCT_MW057740         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttcaaatttgatctattcc-------atacatttcatttatttcaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_KY001813         agaataatagatttttc--tttcctttttggtttggtttctaaatccatctttttaacttttaatttgatctattccatacattatacatttcatttatctaaataaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattaaaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_KU234277         agaataatggattttttctttcctttttttgtttggtttctaaatccatcttcttaacttcaaattttatctattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaaaccaaagaaactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057737         agaataatagattttttctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttctagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057733         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttcaaatttgatctattcc-------atacatttcatttatttcaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057732         agaataatagattttttctttcctttttttgtttggtttctaaatccatcttcttaacttcaaattttatctattcc-------atacatttcatttatttaaatgaaatcatcaaatcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_KU189255         agaataatagattttttctttcctttttttgtttggtttctaaatccctcttcttaacttcaaattttatctattcc-------atacatttcatttatttaaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057726         agaataatggattttttctttcctttttttgtttggtttctaaatccatcttcttaacttaaaattttatctattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaaaccaaagaaactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057741         agaataatagattttttctttccttttttggttcagtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttatctaaattaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057727         agaataatggattttttctttcctttttttgtttggtttctaaatccatcttcttaacttcaaattttatctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaataaactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057722         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttcaaatttgatctattcc-------atacatttcatttatttcaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057723         agaataatagattttttctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_V_cruziana_NY21  agaataatagatttttc--tttcctttttggtttggtttctaaatccatctttttaacttttaattttatctattccatacattatacatttcatttatctaaataaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattaaaaag-------ataaatatcaagtgagcgtaggaaacgg----
+psbI_trnS_GCT_MH161176         agaataatggatttttcctttcctttttt-----ggtttctaaatccatcttcttaacttttaatttgatctattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaagccaaagggactcgggatttatagaattagaaagataaataataaatatcaagtgagcgtagggaa-------
+psbI_trnS_GCT_MW057721         agaataatggattcttccattccttttttggtttggtttctaaatccatcttcttaacttccaatttgatctattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaaaccaaaaggactcgggatttatagaattataaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057736         agaataatagattttttctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttctagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_V_boliviana_NY24 agaataatagatttttc--tttcctttttggtttggtttctaaatccatctttttaacttttaattttatctattccatacattatacatttcatttatctaaataaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattaaaaag-------ataaatatcaagtgagcgtaggaaacggag--
+psbI_trnS_GCT_MW057735         agaataatagattttttctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttctagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MW057729         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttaaaattttacctattcc-------atacatttcatttagataaatgaaatc-----attaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtagaaaa-------
+psbI_trnS_GCT_MW057730         agaataatagattctttctttccttttttggtttggtttctaaatccatcttcttaacttaaaattttacctattcc-------atacatttcatttagataaatgaaatc-----attaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtagaaaa-------
+psbI_trnS_GCT_MW057739         agaataatagattttttctttccttttttggtttggtttctaaatccatcttcttaacttcaaatttgatctattcc-------atacatttcatttatttcaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_MH161175         agaataatggatttttcctttcctttttt-----ggtttctaaatccatcttcttaacttttaatttgatctattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaagccaaagggactcgggatttatagaattagaaag-------ataaatatcaagtgagcgtagggag-------
+psbI_trnS_GCT_NC_031505        -aggtaatttatttttcctttcctttttt-----ggtttatcaatccatcttcttaacttaggattttatctattcc-------atgggtttcatttagataaatgaaacc-----atcaattcaaccaaagcaatcaaa-tcaggatttata-----ataaag-------ataaatatcaagtgggcgggggggg----gta
+psbI_trnS_GCT_MW057725         agaataatagattttgtctttccttttttggttcggtttataaatccatcttcttaacttccaattttacctattcc-------atacatttcatttagataaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaattagaaag-------ataaatatcaagtgagcgtaggaaa-------
+psbI_trnS_GCT_KY284156         agaataatggatttttccattcttttttttgtttggtttataaatccatcttcttaacttccaatttgatttattcc-------atacatttcatttatctaaatgaaatc-----atcaatccaaccaaaccaaagggactcg---------gaattataaag-------ataaatatcaagtgagcttaggaaa-------
+psbI_trnS_GCT_MW057734         agaataatagattt-ttctttccttttttggtttggtttctaaatccatcttcttaacttccaattttatctattcc-------atacatttcatttatttaaatgaaatc-----atcaatccaaccaaaccaaagggactcggggtttatagaatgagaaag-------ataaatatcaagtgagcgtaggaaa-------
+;
+end;

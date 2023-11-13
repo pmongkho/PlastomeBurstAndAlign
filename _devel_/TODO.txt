@@ -1,0 +1,19 @@
+python FeatureExtractAndAlign_CDS.py -i .
+/usr/local/lib/python3.9/dist-packages/Bio/GenBank/__init__.py:359: BiopythonParserWarning: Attempting to fix invalid location '160748..90644' as it looks like incorrect origin wrapping. Please fix input file, this could have unintended behavior.
+  warnings.warn(
+/usr/local/lib/python3.9/dist-packages/Bio/GenBank/__init__.py:359: BiopythonParserWarning: Attempting to fix invalid location '160589..65' as it looks like incorrect origin wrapping. Please fix input file, this could have unintended behavior.
+  warnings.warn(
+/usr/local/lib/python3.9/dist-packages/Bio/GenBank/__init__.py:359: BiopythonParserWarning: Attempting to fix invalid location '160605..90539' as it looks like incorrect origin wrapping. Please fix input file, this could have unintended behavior.
+  warnings.warn(
+/usr/local/lib/python3.9/dist-packages/Bio/GenBank/__init__.py:359: BiopythonParserWarning: Attempting to fix invalid location '160609..59' as it looks like incorrect origin wrapping. Please fix input file, this could have unintended behavior.
+  warnings.warn(
+
+
+ERROR: Gene to be excluded not found in infile.
+
+
+The script "" requires python2 and Biopython for Python2; this needs to be checked ahead of time.
+
+
+This script requires the presence of mafft; this needs to be checked ahead of time.
+Bio.Application.ApplicationError: Non-zero return code 127 from 'mafft ./output/prot_psbA.unalign.fasta', message '/bin/sh: 1: mafft: not found'

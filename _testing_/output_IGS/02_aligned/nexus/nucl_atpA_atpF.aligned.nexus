@@ -1,0 +1,37 @@
+#NEXUS
+begin data;
+dimensions ntax=30 nchar=77;
+format datatype=dna missing=? gap=-;
+matrix
+atpA_atpF_MW057731         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057738         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_KT749898         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_V_amazonica_NY14 tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaatagaaggaagga
+atpA_atpF_MW057740         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_KY001813         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaatagaaggaagga
+atpA_atpF_KU234277         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057737         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057733         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057732         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_KU189255         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057726         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057741         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057727         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057722         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057723         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_V_cruziana_NY21  tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaatagaaggaagga
+atpA_atpF_MH161176         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataata-----cctatagtagaagga---------
+atpA_atpF_MW057721         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataata-----cctatagtagaagga---------
+atpA_atpF_MW057736         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_V_boliviana_NY24 tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaatagaaggaagga
+atpA_atpF_MW057735         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057729         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057730         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MW057739         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_MH161175         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataata-----cctatagtagaagga---------
+atpA_atpF_NC_031505        tagtatctcttaattctttctaggaagcaaaaaaggataaaaataata-----cctatagtaaaaaagga-------
+atpA_atpF_MW057725         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+atpA_atpF_KY284156         tagtacctattaattctttctaggaagcaaaaaaggagaaaaataata-----cctatagtagaagga---------
+atpA_atpF_MW057734         tagtatctcttaattctttctaggaagcaaaaaaggagaaaaataatacctatcctatagtagaagga---------
+;
+end;

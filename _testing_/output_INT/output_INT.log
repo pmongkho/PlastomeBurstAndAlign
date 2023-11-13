@@ -1,0 +1,64 @@
+2022-10-01 11:41:34 [INFO] extracting annotations from genome records
+2022-10-01 11:41:34 [INFO] reading file `MW057731.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057738.gb`
+2022-10-01 11:41:34 [INFO] reading file `KT749898.gb`
+2022-10-01 11:41:34 [INFO] reading file `V_amazonica_NY14.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057740.gb`
+2022-10-01 11:41:34 [INFO] reading file `KY001813.gb`
+2022-10-01 11:41:34 [INFO] reading file `KU234277.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057737.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057733.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057732.gb`
+2022-10-01 11:41:34 [INFO] reading file `KU189255.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057726.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057741.gb`
+2022-10-01 11:41:34 [INFO] reading file `MW057727.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057722.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057723.gb`
+2022-10-01 11:41:35 [INFO] reading file `V_cruziana_NY21.gb`
+2022-10-01 11:41:35 [INFO] reading file `MH161176.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057721.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057736.gb`
+2022-10-01 11:41:35 [INFO] reading file `V_boliviana_NY24.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057735.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057729.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057730.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057739.gb`
+2022-10-01 11:41:35 [INFO] reading file `MH161175.gb`
+2022-10-01 11:41:35 [INFO] reading file `NC_031505.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057725.gb`
+2022-10-01 11:41:35 [INFO] reading file `KY284156.gb`
+2022-10-01 11:41:35 [INFO] reading file `MW057734.gb`
+2022-10-01 11:41:35 [INFO] removing duplicate annotations
+2022-10-01 11:41:35 [INFO] removing annotations that occur in fewer than 1 taxa
+2022-10-01 11:41:35 [INFO] removing ORFs
+2022-10-01 11:41:35 [INFO] removing user-defined genes
+2022-10-01 11:41:35 [INFO] writing unaligned nucleotide sequences to file
+2022-10-01 11:41:48 [INFO] converting FASTA alignment to NEXUS alignment
+2022-10-01 11:41:55 [INFO] combining NEXUS alignments (in no particular order)
+Traceback (most recent call last):
+  File "/home/mi/git/michaelgruenstaeudl_PlastomeBurstAndAlign/PlastomeRegionBurstAndAlign.py", line 444, in <module>
+    main(args)
+  File "/home/mi/git/michaelgruenstaeudl_PlastomeBurstAndAlign/PlastomeRegionBurstAndAlign.py", line 407, in main
+    Bio.AlignIO.convert(outFn_nucl_combined_nexus, 'nexus', outFn_nucl_combined_fasta, 'fasta')
+  File "/usr/local/lib/python3.9/dist-packages/Bio/AlignIO/__init__.py", line 474, in convert
+    return write(alignments, out_file, out_format)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/AlignIO/__init__.py", line 220, in write
+    for alignment in alignments:
+  File "/usr/local/lib/python3.9/dist-packages/Bio/AlignIO/__init__.py", line 337, in parse
+    yield from i
+  File "/usr/local/lib/python3.9/dist-packages/Bio/AlignIO/NexusIO.py", line 38, in NexusIterator
+    n = Nexus.Nexus(handle)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 668, in __init__
+    self.read(input)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 718, in read
+    self._parse_nexus_block(title, contents)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 759, in _parse_nexus_block
+    getattr(self, "_" + line.command)(line.options)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 1275, in _charpartition
+    subname, subindices = self._get_indices(
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 1295, in _get_indices
+    name = self._name_n_vector(opts, separator=separator)
+  File "/usr/local/lib/python3.9/dist-packages/Bio/Nexus/Nexus.py", line 1320, in _name_n_vector
+    raise NexusError("Formatting error in line: %s " % rest)
+Bio.Nexus.Nexus.NexusError: Formatting error in line:  trnK-TTT_intron1: 1-2782 

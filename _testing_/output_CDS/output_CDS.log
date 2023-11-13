@@ -1,0 +1,41 @@
+2022-09-25 22:32:59 [INFO] extracting annotations from genome records
+2022-09-25 22:32:59 [INFO] reading file `MW057731.gb`
+2022-09-25 22:32:59 [INFO] reading file `MW057738.gb`
+2022-09-25 22:32:59 [INFO] reading file `KT749898.gb`
+2022-09-25 22:32:59 [INFO] reading file `V_amazonica_NY14.gb`
+2022-09-25 22:32:59 [INFO] reading file `MW057740.gb`
+2022-09-25 22:32:59 [INFO] reading file `KY001813.gb`
+2022-09-25 22:32:59 [INFO] reading file `KU234277.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057737.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057733.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057732.gb`
+2022-09-25 22:33:00 [INFO] reading file `KU189255.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057726.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057741.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057727.gb`
+2022-09-25 22:33:00 [INFO] reading file `MW057722.gb`
+2022-09-25 22:33:01 [INFO] reading file `MW057723.gb`
+2022-09-25 22:33:01 [INFO] reading file `V_cruziana_NY21.gb`
+2022-09-25 22:33:01 [INFO] reading file `MH161176.gb`
+2022-09-25 22:33:01 [INFO] reading file `MW057721.gb`
+2022-09-25 22:33:01 [INFO] reading file `MW057736.gb`
+2022-09-25 22:33:01 [INFO] reading file `V_boliviana_NY24.gb`
+2022-09-25 22:33:01 [INFO] reading file `MW057735.gb`
+2022-09-25 22:33:02 [INFO] reading file `MW057729.gb`
+2022-09-25 22:33:02 [INFO] reading file `MW057730.gb`
+2022-09-25 22:33:02 [INFO] reading file `MW057739.gb`
+2022-09-25 22:33:02 [INFO] reading file `MH161175.gb`
+2022-09-25 22:33:02 [INFO] reading file `NC_031505.gb`
+2022-09-25 22:33:02 [INFO] reading file `MW057725.gb`
+2022-09-25 22:33:02 [INFO] reading file `KY284156.gb`
+2022-09-25 22:33:02 [INFO] reading file `MW057734.gb`
+2022-09-25 22:33:03 [INFO] removing duplicate annotations
+2022-09-25 22:33:03 [INFO] removing annotations that occur in fewer than 1 taxa
+2022-09-25 22:33:03 [INFO] removing ORFs
+2022-09-25 22:33:03 [INFO] removing user-defined genes
+2022-09-25 22:33:03 [INFO] writing unaligned nucleotide sequences to file
+2022-09-25 22:33:39 [INFO] conducting back-translation
+2022-09-25 22:34:31 [INFO] converting FASTA alignment to NEXUS alignment
+2022-09-25 22:34:39 [INFO] combining NEXUS alignments (in no particular order)
+2022-09-25 22:34:41 [INFO] end of script
+
