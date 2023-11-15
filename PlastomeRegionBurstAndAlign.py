@@ -84,7 +84,7 @@ class ExtractAndCollect:
             if feature.type == 'CDS':
                 if 'gene' in feature.qualifiers:
                     gene_name = feature.qualifiers['gene'][0]
-                    seq_name = gene_name + '_' + rec.name   #f"{gene_name}_{rec.name}" 
+                    seq_name = f"{gene_name}_{rec.name}"  #gene_name + '_' + rec.name   
 
                     # Step 1. Extract nucleotide sequence of each gene
                     seq_obj = feature.extract(rec).seq
@@ -340,7 +340,7 @@ class ExtractAndCollect:
         log.info("saving individual regions as unaligned nucleotide matrices")
         for k, v in self.main_odict_nucl.items():
             # Define input and output names
-            out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta')
+            out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta") #'nucl_' + k + '.unalign.fasta'
             with open(out_fn_unalign_nucl, 'w') as hndl:
                 SeqIO.write(v, hndl, 'fasta')
 
@@ -356,8 +356,8 @@ class ExtractAndCollect:
         if self.main_odict_nucl.items():
             for k in self.main_odict_nucl.keys():
                 # Define input and output names
-                out_fn_unalign_nucl = os.path.join(out_dir, 'nucl_' + k + '.unalign.fasta') #f"nucl_{k}.unalign.fasta"
-                out_fn_aligned_nucl = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta') #f"nucl_{k}.aligned.fasta"
+                out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta") #'nucl_' + k + '.unalign.fasta'
+                out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta") #'nucl_' + k + '.aligned.fasta'
 
             # Step 1. Determine number of CPU core available
                 # TO DO #
@@ -423,8 +423,8 @@ class ExtractAndCollect:
         success_list = []
         for k in self.main_odict_nucl.keys():
             # Step 1. Define input and output names
-            aligned_nucl_fasta = os.path.join(out_dir, 'nucl_' + k + '.aligned.fasta')
-            aligned_nucl_nexus = os.path.join(out_dir, 'nucl_' + k + '.aligned.nexus')
+            aligned_nucl_fasta = os.path.join(out_dir, f"nucl_{k}.aligned.fasta") #'nucl_' + k + '.aligned.fasta'
+            aligned_nucl_nexus = os.path.join(out_dir, f"nucl_{k}.aligned.nexus") #'nucl_' + k + '.aligned.nexus' 
             # Step 2. Convert FASTA alignment to NEXUS alignment
             try:
                 AlignIO.convert(aligned_nucl_fasta, 'fasta', aligned_nucl_nexus, 'nexus', molecule_type='DNA')
