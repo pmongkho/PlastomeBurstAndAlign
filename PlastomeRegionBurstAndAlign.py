@@ -22,6 +22,7 @@ from copy import deepcopy
 from io import StringIO
 import logging
 import os
+import multiprocessing
 from re import sub
 import subprocess
 # ------------------------------------------------------------------------------#
@@ -42,7 +43,7 @@ class ExtractAndCollect:
         """
 
         self.select_mode = select_mode
-        self.min_num_taxa = 1
+        self.min_num_taxa = min_num_taxa
 
         log.info("parse genome records and extract their annotations")
         self.main_odict_nucl = OrderedDict()
@@ -71,9 +72,6 @@ class ExtractAndCollect:
             if not self.main_odict_nucl.items():
                 log.critical(f"No items in main dictionary: {out_dir}")
                 raise Exception()
-
-        # return main_odict_nucl, main_odict_prot
-        
 
     def extract_cds(self, rec, min_seq_length):
         """ Extracts all CDS (coding sequences = genes) from a given sequence record
@@ -301,7 +299,7 @@ class ExtractAndCollect:
     
     def remove_annos_if_below_minnumtaxa(self, min_num_taxa):
         log.info(f"removing annotations that occur in fewer than {min_num_taxa} taxa")
-        for k, v in self.main_odict_nucl.items():
+        for k, v in list(self.main_odict_nucl.items()):
             if len(v) < min_num_taxa:
                 del self.main_odict_nucl[k]
                 if self.main_odict_prot:
@@ -383,7 +381,11 @@ class ExtractAndCollect:
         log.info("conducting MSA based on protein sequence data, followed by back-translation to nucleotides")
 
         # Step X. Determine number of CPU core available
-        num_threads = os.cpu_count()  # Automatically determine number of threads available
+        try:
+            num_threads = os.cpu_count()  # Automatically determine number of threads available
+ 
+        except NotImplementedError:
+            num_threads = multiprocessing.cpu_count()
 
         # Step 3. Check if back-translation script exists
         path_to_back_transl_helper = os.path.join(
