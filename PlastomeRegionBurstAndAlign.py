@@ -19,6 +19,7 @@ from Bio.SeqFeature import (
 import coloredlogs
 from collections import OrderedDict
 from copy import deepcopy
+from distutils.spawn import find_executable
 from io import StringIO
 import logging
 import multiprocessing
@@ -135,10 +136,8 @@ class ExtractAndCollect:
 
             # Step 3. Define names of IGS
             if "gene" in cur_feat.qualifiers and "gene" in adj_feat.qualifiers:
-                cur_feat_name_safe = cur_feat_name.replace("-", "_")
-                cur_feat_name_safe = sub(r"\W", "", cur_feat_name_safe)
-                adj_feat_name_safe = adj_feat_name.replace("-", "_")
-                adj_feat_name_safe = sub(r"\W", "", adj_feat_name_safe)
+                cur_feat_name_safe = sub(r"\W", "", cur_feat_name.replace("-", "_"))
+                adj_feat_name_safe = sub(r"\W", "", adj_feat_name.replace("-", "_"))
                 igs_name = cur_feat_name_safe + "_" + adj_feat_name_safe
                 inv_igs_name = adj_feat_name_safe + "_" + cur_feat_name_safe
 
@@ -201,8 +200,7 @@ class ExtractAndCollect:
             if feature.type == "CDS" or feature.type == "tRNA":
                 try:
                     gene_name_base = feature.qualifiers["gene"][0]
-                    gene_name_base_safe = gene_name_base.replace("-", "_")
-                    gene_name_base_safe = sub(r"\W", "", gene_name_base_safe)
+                    gene_name_base_safe = sub(r"\W", "", gene_name_base.replace("-", "_"))
                 except Exception as e:
                     log.warning(
                         f"Unable to extract gene name for CDS starting "
@@ -616,13 +614,18 @@ def concatenate_successful_alignments(success_list):
         out_fn_nucl_concat_nexus, "nexus", out_fn_nucl_concat_fasta, "fasta"
     )
 
+def test_if_alignsoftw_present(softw):
+    if find_executable(softw) is not None:
+        pass
+    else:
+        log.critical(f"Unable to find alignment software `{softw}`")
+        raise Exception()
 
 # ------------------------------------------------------------------------------#
 # MAIN
 # ------------------------------------------------------------------------------#
 def main(args):
-    (
-        in_dir,
+    (   in_dir,
         out_dir,
         fileext,
         exclude_list,
@@ -632,10 +635,8 @@ def main(args):
         verbose
     ) = unpack_input_parameters(args)
     setup_logger(verbose)
+    test_if_alignsoftw_present('mafft')
 
-    # TO DO
-    # Include function here that tests if the third-party script mafft is even available on the system
-    
     extract = ExtractAndCollect(in_dir, fileext, select_mode)
     extract.remove_duplicate_annos()
     extract.remove_annos_if_below_minnumtaxa(min_num_taxa)
