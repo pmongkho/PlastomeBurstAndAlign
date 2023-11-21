@@ -60,18 +60,6 @@ class ExtractAndCollect:
         # Is there a way to suppress the warning in line above but activate a flag which would allow us to
         # solve it in individual function?
 
-        # if self.select_mode == "cds":
-        #     self.extract_cds(rec, min_seq_length)
-        # if self.select_mode == "igs":
-        #     self.extract_igs(rec, f, min_seq_length)
-        # if self.select_mode == "int":
-        #     self.extract_int(main_odict_intron2, rec)
-        #     self.main_odict_nucl.update(main_odict_intron2)
-
-        # if not self.main_odict_nucl.items():
-        #     log.critical(f"No items in main dictionary: {out_dir}")
-        #     raise Exception()
-
         with ThreadPoolExecutor() as executor:
             for f in files:
                 executor.submit(self.process_file, in_dir, f, min_seq_length)
@@ -370,29 +358,37 @@ class ExtractAndCollect:
                 - unaligned nucleotide matrices (present as files in FASTA format)
         OUTPUT: aligned nucleotide matrices (present as files in FASTA format)
         """
-        log.info("conducting MSA based on nucleotide sequence data")
-        if self.main_odict_nucl.items():
-            for k in self.main_odict_nucl.keys():
-                # Define input and output names
-                out_fn_unalign_nucl = os.path.join(
-                    out_dir, "nucl_" + k + ".unalign.fasta"
-                )  # f"nucl_{k}.unalign.fasta"
-                out_fn_aligned_nucl = os.path.join(
-                    out_dir, "nucl_" + k + ".aligned.fasta"
-                )  # f"nucl_{k}.aligned.fasta"
 
-                # Step 1. Determine number of CPU core available
-                # TO DO #
-                # Automatically determine number of threads available #
-                # Have the number of threads saved as num_threads
-                num_threads = 1
-                # Step 2. Align matrices based on their NUCLEOTIDE sequences via third-party alignment tool
-                # TO DO #
-                # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.;
-                # use a new argparse argument and if statements in line below
-                mafft_align(out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
+        logging.info("Conducting MSA based on nucleotide sequence data")
+        if self.main_odict_nucl:
+            # Step 1. Determine number of CPU core available
+            # TO DO #
+            # Automatically determine number of threads available #
+            # Have the number of threads saved as num_threads
+            num_threads = os.cpu_count()  # Adjust as needed
+
+            # Prepare a list of tasks for alignment
+            alignment_tasks = []
+            for k in self.main_odict_nucl.keys():
+                out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
+                out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
+                alignment_tasks.append(
+                    (out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
+                )
+
+            # Step 2. Process alignments in parallel
+            # TO DO #
+            # Let user choose if alignment conducted with MAFFT, MUSCLE, CLUSTAL, etc.;
+            # use a new argparse argument and if statements in line below
+            with ThreadPoolExecutor(max_workers=num_threads) as executor:
+                futures = [
+                    executor.submit(parallel_mafft_align, *task)
+                    for task in alignment_tasks
+                ]
+                for future in futures:
+                    future.result()  # Wait for all tasks to complete
         else:
-            log.critical("No items in nucleotide main dictionary to process")
+            logging.critical("No items in nucleotide main dictionary to process")
             raise Exception()
 
     def conduct_protein_alignment_and_back_translation(self):
@@ -485,7 +481,7 @@ class ExtractAndCollect:
         return success_list
 
 
-# align_back_trans file here
+# align_back_trans file
 # -----------------------------------------------------------------#
 
 
@@ -662,7 +658,8 @@ def process_protein_alignment(k, v, path_to_back_transl_helper, num_threads):
     with open(out_fn_unalign_prot, "w") as hndl:
         SeqIO.write(v, hndl, "fasta")
     # Step 2. Align matrices based on their PROTEIN sequences via third-party alignment tool
-    mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
+
+    parallel_mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
     # Step 4. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
     # Note: For some reason, the path_to_back_transl_helper spits only works
     # if FASTA files are specified, not if NEXUS files are specified
@@ -688,6 +685,11 @@ def mafft_align(input_file, output_file, num_threads):
     stdout, stderr = mafft_cline()
     with open(output_file, "w") as hndl:
         hndl.write(stdout)
+
+
+def parallel_mafft_align(input_file, output_file, num_threads):
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        executor.submit(mafft_align, input_file, output_file, num_threads)
 
 
 # ------------------------------------------------------------------------------#
