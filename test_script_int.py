@@ -35,4 +35,3 @@ subprocess.run(["python", full_script_path, "-i", ".", "-o", folder_INT, "-s", "
 os.chdir(script_dir)  # Move back to the directory containing the test script
 shutil.rmtree("benchmarking1")
 print("benchmarking1 directory and its contents have been deleted.")
-
