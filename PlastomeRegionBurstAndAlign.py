@@ -391,20 +391,25 @@ class ExtractAndCollect:
         log.info(
             "Conducting MSA based on protein sequence data, followed by back-translation to nucleotides"
         )
-        # Step X. Determine number of CPU core available
-        num_threads = os.cpu_count()
 
-        # Use ThreadPoolExecutor to parallelize the alignment and back-translation tasks
+        # Step 1. Determine number of CPU core available
+        try:
+            num_threads = os.cpu_count()
+        except NotImplementedError:
+            num_threads = multiprocessing.cpu_count()
+        log.info(f"  using {num_threads} CPUs")
+
+        # Step 3. Use ThreadPoolExecutor to parallelize alignment and back-translation
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = {
+            future_to_protein = {
                 executor.submit(process_protein_alignment, k, v, num_threads): k
                 for k, v in self.main_odict_prot.items()
             }
 
-            for future in as_completed(futures):
-                k = futures[future]
+            for future in as_completed(future_to_protein):
+                k = future_to_protein[future]
                 try:
-                    future.result()
+                    future.result()  # If needed, you can handle results here
                 except Exception as e:
                     log.error(f"{k} generated an exception: {e}")
 
@@ -659,7 +664,6 @@ def process_protein_alignment(k, v, num_threads):
         log.warning(
             f"Unable to conduct back-translation of `{k}`. " f"Error message: {e}."
         )
-
 
 # -----------------------------------------------------------------#
 def mafft_align(input_file, output_file, num_threads):
