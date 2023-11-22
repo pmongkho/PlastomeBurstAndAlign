@@ -393,7 +393,7 @@ class ExtractAndCollect:
         )
         # Step X. Determine number of CPU core available
         num_threads = os.cpu_count()
-        
+
         # Use ThreadPoolExecutor to parallelize the alignment and back-translation tasks
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = {
@@ -623,6 +623,13 @@ def perform_back_translation(
 
 
 # -----------------------------------------------------------------#
+def process_nucleotide_alignment(k, num_threads):
+    # Step 1. Define input and output names
+    out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
+    out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
+    # Step 2. Align matrices via third-party alignment tool
+    mafft_align(out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
+
 
 def process_protein_alignment(k, v, num_threads):
     # Define input and output names
