@@ -28,7 +28,7 @@ subprocess.run(["mkdir", "-p", f"{folder_CDS}/02_aligned/fasta"])
 subprocess.run(["mkdir", "-p", f"{folder_CDS}/02_aligned/nexus"])
 
 # Step 4: Run your Python script using the full_script_path
-subprocess.run(["python", full_script_path, "-i", ".", "-o", folder_CDS, "-s", "cds"])
+subprocess.run(["python", full_script_path, "-i", ".", "-o", folder_CDS, "-s", "cds", "-t", "5", "-l", "6"])
 
 # run this to remove the folder, if not can comment out
 # Step 5: Delete the benchmarking1 directory and its contents
