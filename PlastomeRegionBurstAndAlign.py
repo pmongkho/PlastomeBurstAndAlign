@@ -60,11 +60,11 @@ class ExtractAndCollect:
             # solve it in individual function?
 
             if self.select_mode == "cds":
-                self.extract_cds(rec)
+                self._extract_cds(rec)
             if self.select_mode == "igs":
-                self.extract_igs(rec)
+                self._extract_igs(rec)
             if self.select_mode == "int":
-                self.extract_int(rec, main_odict_intron2)
+                self._extract_int(rec, main_odict_intron2)
                 self.main_odict_nucl.update(main_odict_intron2)
 
             if not self.main_odict_nucl.items():
@@ -72,7 +72,7 @@ class ExtractAndCollect:
                 raise Exception()
         return (self.main_odict_nucl, self.main_odict_prot)
 
-    def extract_cds(self, rec):
+    def _extract_cds(self, rec):
         """Extracts all CDS (coding sequences = genes) from a given sequence record
         OUTPUT: saves to global main_odict_nucl and to global main_odict_prot
         """
@@ -110,7 +110,7 @@ class ExtractAndCollect:
                     else:
                         self.main_odict_prot[gene_name] = [seq_rec]
 
-    def extract_igs(self, rec):
+    def _extract_igs(self, rec):
         """Extracts all IGS (intergenic spacers) from a given sequence record
         OUTPUT: saves to global main_odict_nucl
         """
@@ -195,7 +195,7 @@ class ExtractAndCollect:
                     )
                     continue
 
-    def extract_int(self, rec, main_odict_intron2):
+    def _extract_int(self, rec, main_odict_intron2):
         """Extracts all INT (introns) from a given sequence record
         OUTPUT: saves to global main_odict_nucl
         """
@@ -214,12 +214,38 @@ class ExtractAndCollect:
                         f"Error message: {e}"
                     )
                     continue
+                ### Inner Function - Start ###
+                def extract_internal_intron(rec, feature, gene_name, offset):
+                    try:
+                        feature.location = FeatureLocation(
+                            feature.location.parts[offset].end,
+                            feature.location.parts[offset + 1].start
+                        )
+                    except Exception:
+                        feature.location = FeatureLocation(
+                            feature.location.parts[offset + 1].start,
+                            feature.location.parts[offset].end
+                        )
+                    try:
+                        seq_name = gene_name + "_" + rec.name
+                        seq_obj = feature.extract(rec).seq  # Here the actual extraction is conducted
+                        seq_rec = SeqRecord.SeqRecord(
+                            seq_obj, id=seq_name, name="", description=""
+                        )
+                        return seq_rec, gene_name
+                    except Exception as e:
+                        log.critical(
+                            f"Unable to conduct intron extraction for {feature.qualifiers['gene']}.\n"
+                            f"Error message: {e}"
+                        )
+                        raise Exception()
+                ### Inner Function - End ###
                 # Step 1. Limiting the search to CDS containing introns
                 # Step 1.a. If one intron in gene:
                 if len(feature.location.parts) == 2:
                     try:
                         gene_name = f"{gene_name_base_safe}_intron1"
-                        seq_rec, gene_name = self.extract_intron_internal(
+                        seq_rec, gene_name = extract_internal_intron(
                             rec, feature, gene_name, 0
                         )
                         if gene_name not in self.main_odict_nucl.keys():
@@ -237,10 +263,10 @@ class ExtractAndCollect:
                 if len(feature.location.parts) == 3:
                     copy_feature = deepcopy(
                         feature
-                    )  # Important b/c feature is overwritten in self.extract_intron_internal()
+                    )  # Important b/c feature is overwritten in extract_internal_intron()
                     try:
                         gene_name = f"{gene_name_base_safe}_intron1"
-                        seq_rec, gene_name = self.extract_intron_internal(
+                        seq_rec, gene_name = extract_internal_intron(
                             rec, feature, gene_name, 0
                         )
                         if gene_name not in self.main_odict_nucl.keys():
@@ -258,7 +284,7 @@ class ExtractAndCollect:
                     feature = copy_feature
                     try:
                         gene_name = f"{gene_name_base_safe}_intron2"
-                        seq_rec, gene_name = self.extract_intron_internal(
+                        seq_rec, gene_name = extract_internal_intron(
                             rec, feature, gene_name, 1
                         )
 
@@ -273,31 +299,6 @@ class ExtractAndCollect:
                             f"Error message: {e}"
                         )
                         pass
-
-    def extract_intron_internal(self, rec, feature, gene_name, offset):
-        try:
-            feature.location = FeatureLocation(
-                feature.location.parts[offset].end,
-                feature.location.parts[offset + 1].start
-            )
-        except Exception:
-            feature.location = FeatureLocation(
-                feature.location.parts[offset + 1].start,
-                feature.location.parts[offset].end
-            )
-        try:
-            seq_name = gene_name + "_" + rec.name
-            seq_obj = feature.extract(rec).seq  # Here the actual extraction is conducted
-            seq_rec = SeqRecord.SeqRecord(
-                seq_obj, id=seq_name, name="", description=""
-            )
-            return seq_rec, gene_name
-        except Exception as e:
-            log.critical(
-                f"Unable to conduct intron extraction for {feature.qualifiers['gene']}.\n"
-                f"Error message: {e}"
-            )
-            raise Exception()
 
 # -----------------------------------------------------------------#
 
@@ -315,9 +316,21 @@ class DataCleaning:
 
     def remove_duplicate_annos(self):
         log.info("  removing duplicate annotations")
-        self.remove_duplicates(self.main_odict_nucl)
+        ### Inner Function - Start ###
+        def remove_duplicates(my_dict):
+            """my_dict is modified in place"""
+            for k, v in my_dict.items():
+                unique_items = []
+                seen_ids = set()
+                for seqrec in v:
+                    if seqrec.id not in seen_ids:
+                        seen_ids.add(seqrec.id)
+                        unique_items.append(seqrec)
+                my_dict[k] = unique_items
+        ### Inner Function - End ###
+        remove_duplicates(self.main_odict_nucl)
         if self.select_mode == "cds":
-            self.remove_duplicates(self.main_odict_prot)
+            remove_duplicates(self.main_odict_prot)
 
     def remove_annos_if_below_minseqlength(self, min_seq_length):
         log.info(f"  removing annotations whose longest sequence is shorter than {min_seq_length} bp")
@@ -362,17 +375,6 @@ class DataCleaning:
                     pass
         return (self.main_odict_nucl, self.main_odict_prot)
 
-    def remove_duplicates(self, my_dict):
-        """my_dict is modified in place"""
-        for k, v in my_dict.items():
-            unique_items = []
-            seen_ids = set()
-            for seqrec in v:
-                if seqrec.id not in seen_ids:
-                    seen_ids.add(seqrec.id)
-                    unique_items.append(seqrec)
-            my_dict[k] = unique_items
-
 # -----------------------------------------------------------------#
 
 class AlignmentCoordination:
@@ -398,7 +400,7 @@ class AlignmentCoordination:
             with open(out_fn_unalign_nucl, "w") as hndl:
                 SeqIO.write(v, hndl, "fasta")
 
-    def conduct_MSA_nucleotide(self):
+    def conduct_nucleotide_MSA(self):
         """
         Iterates over all unaligned nucleotide matrices and aligns each via a third-party software tool
         INPUT:  - dictionary of sorted nucleotide sequences of all regions (used only for region names!)
@@ -413,11 +415,19 @@ class AlignmentCoordination:
             num_threads = multiprocessing.cpu_count()
         log.info(f"  using {num_threads} CPUs")
 
+        ### Inner Function - Start ###
+        def process_single_nucleotide_MSA(k, num_threads):
+            # Define input and output names
+            out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
+            out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
+            # Step 1. Align matrices via third-party alignment tool
+            self._mafft_align(out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
+        ### Inner Function - End ###
         # Step 2. Use ThreadPoolExecutor to parallelize alignment and back-translation
         if self.main_odict_nucl.items():
             with ThreadPoolExecutor(max_workers=num_threads) as executor:
                 future_to_nucleotide = {
-                    executor.submit(self.process_individual_MSA_nucleotide, k, num_threads): k
+                    executor.submit(process_single_nucleotide_MSA, k, num_threads): k
                     for k in self.main_odict_nucl.keys()
                 }
                 for future in as_completed(future_to_nucleotide):
@@ -430,7 +440,7 @@ class AlignmentCoordination:
             log.critical("No items in nucleotide main dictionary to process")
             raise Exception()
 
-    def conduct_MSA_protein_and_backtranslate(self):
+    def conduct_protein_MSA_and_backtranslate(self):
         """Iterates over all unaligned PROTEIN matrices, aligns them as proteins via
         third-party software, and back-translates each alignment to NUCLEOTIDES
         INPUT:  dictionary of sorted PROTEIN sequences of all regions
@@ -445,10 +455,37 @@ class AlignmentCoordination:
             num_threads = multiprocessing.cpu_count()
         log.info(f"  using {num_threads} CPUs")
 
+        ### Inner Function - Start ###
+        def process_single_protein_MSA(k, v, num_threads):
+            # Define input and output names
+            out_fn_unalign_prot = os.path.join(out_dir, f"prot_{k}.unalign.fasta")
+            out_fn_aligned_prot = os.path.join(out_dir, f"prot_{k}.aligned.fasta")
+            out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
+            out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
+            # Step 1. Write unaligned protein sequences to file
+            with open(out_fn_unalign_prot, "w") as hndl:
+                SeqIO.write(v, hndl, "fasta")
+            # Step 2. Align matrices based on their PROTEIN sequences via third-party alignment tool
+            self._mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
+            # Step 3. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
+            try:
+                backtranslator = BackTranslation(
+                    self.main_odict_nucl, self.main_odict_prot
+                )
+                backtranslator.perform_back_translation(
+                    "fasta", out_fn_aligned_prot,
+                    out_fn_unalign_nucl, out_fn_aligned_nucl, 11
+                )
+            except Exception as e:
+                log.warning(
+                    f"Unable to conduct back-translation of `{k}`. "
+                    f"Error message: {e}."
+                )
+        ### Inner Function - End ###
         # Step 2. Use ThreadPoolExecutor to parallelize alignment and back-translation
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             future_to_protein = {
-                executor.submit(self.process_individual_MSA_protein, k, v, num_threads): k
+                executor.submit(process_single_protein_MSA, k, v, num_threads): k
                 for k, v in self.main_odict_prot.items()
             }
             for future in as_completed(future_to_protein):
@@ -458,44 +495,7 @@ class AlignmentCoordination:
                 except Exception as e:
                     log.error(f"{k} generated an exception: {e}")
 
-    def process_individual_MSA_nucleotide(self, k, num_threads):
-        # Define input and output names
-        out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
-        out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
-
-        # Step 1. Align matrices via third-party alignment tool
-        self.mafft_align(out_fn_unalign_nucl, out_fn_aligned_nucl, num_threads)
-
-    def process_individual_MSA_protein(self, k, v, num_threads):
-        # Define input and output names
-        out_fn_unalign_prot = os.path.join(out_dir, f"prot_{k}.unalign.fasta")
-        out_fn_aligned_prot = os.path.join(out_dir, f"prot_{k}.aligned.fasta")
-        out_fn_unalign_nucl = os.path.join(out_dir, f"nucl_{k}.unalign.fasta")
-        out_fn_aligned_nucl = os.path.join(out_dir, f"nucl_{k}.aligned.fasta")
-
-        # Step 1. Write unaligned protein sequences to file
-        with open(out_fn_unalign_prot, "w") as hndl:
-            SeqIO.write(v, hndl, "fasta")
-
-        # Step 2. Align matrices based on their PROTEIN sequences via third-party alignment tool
-        self.mafft_align(out_fn_unalign_prot, out_fn_aligned_prot, num_threads)
-
-        # Step 3. Conduct actual back-translation from PROTEINS TO NUCLEOTIDES
-        try:
-            backtranslator = BackTranslation(
-                self.main_odict_nucl, self.main_odict_prot
-            )
-            backtranslator.perform_back_translation(
-                "fasta", out_fn_aligned_prot,
-                out_fn_unalign_nucl, out_fn_aligned_nucl, 11
-            )
-        except Exception as e:
-            log.warning(
-                f"Unable to conduct back-translation of `{k}`. "
-                f"Error message: {e}."
-            )
-
-    def mafft_align(self, input_file, output_file, num_threads):
+    def _mafft_align(self, input_file, output_file, num_threads):
         """Perform sequence alignment using MAFFT"""
         mafft_cline = Applications.MafftCommandline(
             input=input_file, adjustdirection=True, thread=num_threads
@@ -807,9 +807,9 @@ def main(args):
     aligncoord = AlignmentCoordination(main_odict_nucl, main_odict_prot)
     aligncoord.save_regions_as_unaligned_matrices()
     if not select_mode == "cds":
-        aligncoord.conduct_MSA_nucleotide()
+        aligncoord.conduct_nucleotide_MSA()
     if select_mode == "cds":
-        aligncoord.conduct_MSA_protein_and_backtranslate()
+        aligncoord.conduct_protein_MSA_and_backtranslate()
     success_list = aligncoord.collect_successful_MSAs()
     aligncoord.concatenate_successful_MSAs(success_list)
 

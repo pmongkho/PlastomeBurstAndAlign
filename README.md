@@ -14,12 +14,11 @@ pip install ipdb
 
 #### Testing
 ```
+cd benchmarking
 # CDS
 python test_script_cds.py
-
 # INT
 python test_script_int.py
-
 # IGS
 python test_script_igs.py
 ```
