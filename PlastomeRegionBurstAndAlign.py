@@ -335,7 +335,7 @@ class DataCleaning:
     def remove_annos_if_below_minseqlength(self, min_seq_length):
         log.info(f"  removing annotations whose longest sequence is shorter than {min_seq_length} bp")
         for k, v in list(self.main_odict_nucl.items()):
-            longest_seq = max([len(s.seq) for s in v])
+            longest_seq = max(len(s.seq) for s in v)
             if longest_seq < min_seq_length:
                 log.info(f"    removing {k} due to minimum sequence length setting")
                 del self.main_odict_nucl[k]
