@@ -163,7 +163,7 @@ class ExtractAndCollect:
                                 f"\t{rec.name}: Exception occurred for IGS between "
                                 f"`{cur_feat_name}` (start pos: {start_pos}) and "
                                 f"`{adj_feat_name}` (end pos:{end_pos}). "
-                                f"Skipping this IGS ...\n"
+                                "Skipping this IGS ...\n"
                                 f"Error message: {e}"
                             )
                             continue
@@ -190,8 +190,8 @@ class ExtractAndCollect:
                 else:
                     log.warning(
                         f"{rec.name}: the IGS between `{cur_feat_name}` and `{adj_feat_name}` is "
-                        f"currently not handled and would have to be extracted manually. "
-                        f"Skipping this IGS ..."
+                        "currently not handled and would have to be extracted manually. "
+                        "Skipping this IGS ..."
                     )
                     continue
 
@@ -208,9 +208,9 @@ class ExtractAndCollect:
                     )
                 except Exception as e:
                     log.warning(
-                        f"Unable to extract gene name for CDS starting "
+                        "Unable to extract gene name for CDS starting "
                         f"at `{feature.location.start}` of `{rec.id}`. "
-                        f"Skipping feature ...\n"
+                        "Skipping feature ...\n"
                         f"Error message: {e}"
                     )
                     continue
