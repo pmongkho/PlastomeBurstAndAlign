@@ -435,7 +435,7 @@ class AlignmentCoordination:
                     try:
                         future.result()  # If needed, you can handle results here
                     except Exception as e:
-                        log.error("%r generated an exception: %s" % (k, e))
+                        log.error("%r generated an exception: %s", k, e)
         else:
             log.critical("No items in nucleotide main dictionary to process")
             raise Exception()
